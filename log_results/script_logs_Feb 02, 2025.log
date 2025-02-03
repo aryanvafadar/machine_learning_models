@@ -1,0 +1,85 @@
+INFO - classes.py - 50 - Opening file /Users/aryanvafadar/Documents/GitHub/machine_learning_models/files/input_files/house_prices_data.csv to create into a pandas dataframe.
+INFO - classes.py - 56 - Initial DataFrame successfully created and set to self.initial_frame
+INFO - classes.py - 57 - Shape of Initial Frame: (21613, 21)
+INFO - classes.py - 58 - Initial Frame Columns: Index(['id', 'date', 'price', 'bedrooms', 'bathrooms', 'sqft_living',
+       'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade',
+       'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode',
+       'lat', 'long', 'sqft_living15', 'sqft_lot15'],
+      dtype='object')
+INFO - classes.py - 59 - Initial Frame DataTypes: {'id': dtype('int64'), 'date': dtype('O'), 'price': dtype('float64'), 'bedrooms': dtype('int64'), 'bathrooms': dtype('float64'), 'sqft_living': dtype('int64'), 'sqft_lot': dtype('int64'), 'floors': dtype('float64'), 'waterfront': dtype('int64'), 'view': dtype('int64'), 'condition': dtype('int64'), 'grade': dtype('int64'), 'sqft_above': dtype('int64'), 'sqft_basement': dtype('int64'), 'yr_built': dtype('int64'), 'yr_renovated': dtype('int64'), 'zipcode': dtype('int64'), 'lat': dtype('float64'), 'long': dtype('float64'), 'sqft_living15': dtype('int64'), 'sqft_lot15': dtype('int64')}
+INFO - classes.py - 60 - Intial Frame Contains Null Values?: id               False
+date             False
+price            False
+bedrooms         False
+bathrooms        False
+sqft_living      False
+sqft_lot         False
+floors           False
+waterfront       False
+view             False
+condition        False
+grade            False
+sqft_above       False
+sqft_basement    False
+yr_built         False
+yr_renovated     False
+zipcode          False
+lat              False
+long             False
+sqft_living15    False
+sqft_lot15       False
+dtype: bool
+INFO - classes.py - 61 - Total Number of Null Values in Each Column: id               0
+date             0
+price            0
+bedrooms         0
+bathrooms        0
+sqft_living      0
+sqft_lot         0
+floors           0
+waterfront       0
+view             0
+condition        0
+grade            0
+sqft_above       0
+sqft_basement    0
+yr_built         0
+yr_renovated     0
+zipcode          0
+lat              0
+long             0
+sqft_living15    0
+sqft_lot15       0
+dtype: int64
+INFO - classes.py - 85 - remove_columns function called. List of columns to remove: ['id', 'date', 'yr_renovated', 'zipcode', 'lat', 'long']
+INFO - classes.py - 89 - Current columns in the dataframe: ['id', 'date', 'price', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15']
+INFO - classes.py - 93 - Requested to remove columns have been set to lowercase.
+INFO - classes.py - 102 - All columns exist within the DataFrame, and will be removed.
+INFO - classes.py - 109 - Columns ['id', 'date', 'yr_renovated', 'zipcode', 'lat', 'long'] have been removed from the dataframe.
+INFO - classes.py - 110 - Columns that remain in the frame: ['price', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'sqft_living15', 'sqft_lot15'].
+INFO - classes.py - 127 - Label price exists in the dataframe. Attempting to remove...
+INFO - classes.py - 131 - Label column has been removed from the dataframe, and will be reinserted at the end.
+INFO - classes.py - 132 - Label Column: 0        221900.0
+1        538000.0
+2        180000.0
+3        604000.0
+4        510000.0
+           ...   
+21608    360000.0
+21609    400000.0
+21610    402101.0
+21611    400000.0
+21612    325000.0
+Name: price, Length: 21613, dtype: float64
+INFO - classes.py - 136 - Label column added back to the dataframe.
+INFO - classes.py - 137 - Sample of new self.initial_frame:        bedrooms  bathrooms  sqft_living  sqft_lot  floors  waterfront  view  condition  grade  sqft_above  sqft_basement  yr_built  sqft_living15  sqft_lot15      price
+7490          2       1.00         1010      4050     1.0           0     0          3      7        1010              0      1950           2310        5000   375000.0
+7152          3       2.50         1090      7700     1.0           0     0          4      7        1090              0      1957           1740        7700   394950.0
+6727          4       2.50         2710     35009     2.0           0     2          3      9        2710              0      1992           2330       35040   600000.0
+10102         3       1.00         1170      7350     1.0           0     0          4      7        1170              0      1960           1170        7350   312500.0
+1515          3       2.25         2180      7741     2.0           0     0          3      9        2180              0      1986           2300        8581   621138.0
+3252          5       4.50         2120      8944     2.0           1     4          5      8        2120              0      1939           2870        8944  1000000.0
+9985          4       2.00         1800      4800     1.5           0     0          3      7        1800              0      1918           1950        4800   632750.0
+5787          2       1.75         1350      4286     1.0           0     0          3      8        1350              0      2004           1440        4839   455000.0
+16345         5       2.50         2860     68519     2.0           0     0          5      8        2860              0      1958           1670       35910   670000.0
+13960         4       2.50         2961     12146     2.0           0     0          3      9        2961              0      1998           2620       17749   695000.0
