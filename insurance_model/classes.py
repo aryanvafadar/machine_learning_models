@@ -6,7 +6,6 @@ import scipy.stats as stats
 import joblib
 from config import output_files_folder, get_prediction_csv, get_ml_file
 
-
 # import sklearn metrics, preprocessing and training/testing data splits
 from sklearn.base import clone
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
@@ -151,59 +150,111 @@ class DatasetCreator:
             logging.error(f"Unable to remove and reinsert the label column to the end of the dataframe. Received error {e}")
             return False
     
-    
-    def clean_frame(self):
-        """Clean the initial dataframe, and return a new cleaned frame"""
-        frame = self.initial_frame.copy()
-        # frame = frame.dropna(axis=0, how='any')
-        frame.columns = frame.columns.str.strip() # remove whitespaces from column headers
-        frame = frame.apply(lambda col: col.str.strip() if col.dtype == 'object' else col) # remove whitespaces from rows
-        frame = frame.replace(to_replace=r"[^a-zA-Z0-9\s]", value="", regex=True) # remove special characters, symbols from rows
-        self.cleaned_frame = frame
-        return self.cleaned_frame
-
-    def encode_frame(self, label: str):
-        """Iterate through the cleaned_frame, and encode binary columns to 0 and 1, and hotencode categorical columns"""
-        frame = self.cleaned_frame.copy()
-        encoder = OneHotEncoder(sparse_output=False, drop=None)
-
-        for column in frame.select_dtypes(include=['object']):
-            if not frame[column].dtype == object:
-                print(f"DataFrame column {column} is of type int or float, and no encoding needed.")
-                continue
-
-            # get number of unique values in the column
-            num_uniques = frame[column].nunique()
-    
-            # if num_uniques equals to 2, then apply simple binary mapping
-            if num_uniques == 2:
-                print(f"Column {column} has 2 unique values, and will therefore be binary encoded.")
-                uniques_list = list(frame[column].unique())
-                mapping = {
-                    uniques_list[0]: 0,
-                    uniques_list[1]: 1,
-                }
-                frame[column] = frame[column].map(mapping)
-                print(f"Encoding completed. Mapping: {mapping}")
-    
-            # if num_uniques is greater than 2, then apply OneHotEncoding
-            if num_uniques > 2:
-                print(f"Column {column} has more than 2 unique values, and will be OneHotEncoded.")
-    
-                # encode the column
-                encoded_col = encoder.fit_transform(frame[[column]]) # make sure col is passed as 2d array[[]]
-                # create a new dataframe with the encoded column
-                encoded_df = pd.DataFrame(data=encoded_col, columns=encoder.get_feature_names_out([column]))
-                # combine the 2 dataframes
-                frame = pd.concat((frame.drop(columns=[column]), encoded_df), axis=1)
-                
+    def clean_frame(self) -> pd.DataFrame:
+        """
+        Takes self.initial_frame and cleans the frame by removing whitespaces and symbols, commas and special characters.
+        
+        Sets the cleaned frame to self.cleaned_frame and returns a new frame if successful. Else returns None if not successful.
+        """
+        
+        try:
+            logging.info("Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.")
+            frame = self.initial_frame.copy()
             
-        # Dynamically move the 'charges' column to the end
-        label_column = frame.pop(label)  # Remove the 'charges' column from the DataFrame
-        frame[label] = label_column      # Add it back at the end
+            # frame = frame.dropna(axis=0, how='any')
+            frame.columns = frame.columns.str.strip() # remove whitespaces from column headers
+            logging.info("Whitespaces from column headers have been removed.")
+            
+            # remove whitespaces from rows
+            frame = frame.apply(lambda col: col.str.strip() if col.dtype == 'object' else col) 
+            logging.info("Whitespaces removed from rows/samples in the dataset.")
+            
+            # remove special characters, symbols from rows
+            frame = frame.replace(to_replace=r"[^a-zA-Z0-9\s]", value="", regex=True) 
+            logging.info("Special characters, symbols and commas removed from the frame.")
+            
+            logging.info("Self.initial_frame has been cleaned. New cleaned frame has been set to self.cleaned_frame")
+            self.cleaned_frame = frame
+            
+            return self.cleaned_frame
+        
+        except Exception as e:
+            logging.error(f"Unable to clean dataframe. Received error {e}")
+            return None
 
-        self.encoded_frame = frame
-        return self.encoded_frame
+    def encode_frame(self, label: str) -> pd.DataFrame:
+        """
+        Iterates through self.cleaned_frame and encodes all string valus within the frame.
+        
+        If the column has 2 unique string values then the column will be binary encoded through simple 0/1 mapping.
+        
+        If the column has more than 2 unique string values, it will be OneHotEncoded with SkLearns OneHotEncoder.
+        
+        Returns an encoded dataframe and sets it to self.encoded_frame. Otherwise returns None if not successful.
+        """
+        
+        logging.info("Frame encoding function has been called. All string data will be converted to numeric (int).")
+        
+        try:
+            # Make a coyp of self.cleaned_frame
+            frame = self.cleaned_frame.copy()
+            logging.info("Self.cleaned_frame has been copied.")
+            
+            # Instantiate OneHotEncoder
+            encoder = OneHotEncoder(sparse_output=False, drop=None)
+            logging.info("SkLearn OneHotEncoder has been instantiated.")
+
+            # Iterate through each column and look for object datatypes. These have strings in them
+            logging.info("Iterating through the dataframe to search for columns whose data is of type object.")
+            
+            for column in frame.select_dtypes(include=['object']):
+                if not frame[column].dtype == object:
+                    logging.info(f"DataFrame column {column} is of type int or float, and no encoding needed.")
+                    continue
+
+                # get number of unique values in the column
+                num_uniques = frame[column].nunique()
+                logging.info(f"Number of uniques found in column {column}: {num_uniques}")
+        
+                # if num_uniques equals to 2, then apply simple binary mapping
+                if num_uniques == 2:
+                    logging.info(f"Because column {column} has 2 unique values, it will be binary encoded.")
+                    uniques_list = list(frame[column].unique())
+                    mapping = {
+                        uniques_list[0]: 0,
+                        uniques_list[1]: 1,
+                    }
+                    frame[column] = frame[column].map(mapping)
+                    logging.info(f"Encoding completed. Mapping: {mapping}")
+        
+                # if num_uniques is greater than 2, then apply OneHotEncoding
+                if num_uniques > 2:
+                    logging.info(f"Because column {column} has more than 2 unique values, it will be OneHotEncoded.")
+        
+                    # encode the column
+                    encoded_col = encoder.fit_transform(frame[[column]]) # make sure col is passed as 2d array[[]]
+                    logging.info(f"Column {column} has been OneHotEncoded.")
+                    
+                    # create a new dataframe with the encoded column
+                    encoded_df = pd.DataFrame(data=encoded_col, columns=encoder.get_feature_names_out([column]))
+                    logging.info("New dataframe with the encoded values has been created.")
+                    
+                    # combine the 2 dataframes
+                    frame = pd.concat((frame.drop(columns=[column]), encoded_df), axis=1)
+                    logging.info("Original dataframe and new dataframe have been comibined on the y axis.")
+                    
+            
+            logging.info("Dataframe has finished being encoded. Label/Target column will now be removed and re-added to the end of the frame.")    
+            label_column = frame.pop(label)  # Remove the label column from the DataFrame
+            frame[label] = label_column      # Add it back at the end
+            logging.info(f"Label column {label} has been removed and readded to the end of the dataframe.")
+
+            self.encoded_frame = frame
+            return self.encoded_frame
+        
+        except Exception as e:
+            logging.error(f"Unable to encode dataframe. Received error {e}")
+            return None
 
     @staticmethod
     def frame_info(frame: pd.DataFrame) -> None:
@@ -215,8 +266,6 @@ class DatasetCreator:
         print(frame.shape)
         print(null_values_by_column)
 
-    
-    
     @staticmethod
     def export_frame_to_csv(frame: pd.DataFrame, file_name: str, output_folder=output_files_folder) -> True:
         """Converts a dataframe to a csv_file. Takes in 2 arguments; an output file folder and the file name"""
@@ -272,7 +321,7 @@ class RegModelTester:
         self.tuned_mae_score = 0
         self.tuned_mse_score = 0
 
-    def get_features_labels(self, model_test_size):
+    def get_features_labels(self, model_test_size) -> bool:
         """
         Extract features and labels, then split the data into training, validation, and testing sets.
 
@@ -280,32 +329,71 @@ class RegModelTester:
             model_test_size (float): The proportion of the dataset to reserve for testing. Eg: 0.30, 0.40, 0.55
 
         Returns:
-            None
+            True: If successful
+            False: If unsuccessful
         """
+        
         try:
-            # Get features (X) and labels (y)
+            
+            logging.info("Get features and labels function has been called.")
+            
+            # Check self.frame exists / is not empty
             if self.frame.empty:
+                logging.error("The input DataFrame is empty.")
                 raise ValueError("The input DataFrame is empty.")
 
+            # get column names
             column_names = list(self.frame.columns)
+            logging.info(f"Columns in DataFrame: {column_names}")
+            
             if len(column_names) < 2:
                 raise ValueError("The DataFrame must have at least one feature column and one label column.")
 
             # Features are all columns except the last; the last column is the label
             features = column_names[:-1]
             labels = column_names[-1]
+            logging.info(f"List of Features: {features}. These columns will be used to create our X variable.")
+            logging.info(f"List of Labels: {labels}. This will be used for our y variable.")
+            
             X = self.frame[features]
             y = self.frame[labels]
-
+            logging.info(f"X DataFrame created, and will be used for train_test_split. X Frame Shape: {X.shape}")
+            logging.info(f"y DataFrame created, and will be used for train_test_split. y Frame Shape: {y.shape}")
+            
             # Split the data into train-test and train-validation sets
             self.X_train_full, self.X_test, self.y_train_full, self.y_test = train_test_split(X, y, test_size=model_test_size, random_state=6712792)
+            
+            logging.info("X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.")
+            logging.info(f"First Split Test Size: {model_test_size}")
+            logging.info(f"Size X_train_full: {self.X_train_full.shape} | Size X_test: {self.X_test.shape}")
+            logging.info(f"Size of y_train_full: {self.y_train_full.shape} | Size y_test: {self.y_test.shape}")
 
             self.X_train, self.X_val, self.y_train, self.y_val = train_test_split(self.X_train_full, self.y_train_full, test_size=0.20, random_state=6712792)
+            
+            logging.info("X_train_full and y_train_full have been split again to create training and testing data to train and tune our model. These new variables (X_train, X_val, y_train, y_val) should only be used to find which model works best on our dataset, and then subsequently tuning this model.")
+            logging.info(f"Size X_train: {self.X_train.shape} | Size X_val: {self.X_val.shape}")
+            logging.info(f"Size of y_train: {self.y_train.shape} | Size y_val: {self.y_test.shape}")
+            
+            logging.info("Testing and Training data have successfully been created. Ready now to get the best model.")
+            return True
 
         except Exception as e:
             print(f"Error in get_features_labels: {e}")
-    
-    def get_best_models(self) -> dict:
+            return False
+            
+    def get_best_models(self, n_iterations: int) -> dict:
+        
+        """
+        Iterates through the DataFrame passed in through RegModelTester() to find the best model for the dataset. The best model has its name, model and scores set to self.
+        
+        Args:
+            - n_iterations (int): Number of times we would like the function to test each model on our dataset. 
+        
+        Returns: 
+            - A dict of all the models tested and their scores if successful, otherwise returns None.
+        """
+        
+        logging.info("get_best_models function has been called.")
 
         # dict of linear models
         linear_models = {
@@ -328,51 +416,73 @@ class RegModelTester:
             **linear_models,
             **non_linear_models
         }
+        
+        logging.info(f"List of models to test: {all_models}")
 
         # creates an empty results dict to store our results
         results = {}
         
-        # Iterate through the dictionaries and test each model
-        for name, model in all_models.items():
+        try:
+            
+            logging.info("Testing each model in the all_models dict now.")
+            
+            logging.info(f"User passed in {n_iterations} number of iterations. We will run the model testing this amount of times.")
+            for idx, model_run in enumerate(range(n_iterations + 1), start=1):
+                
+                logging.info(f"Model Run: {idx}")
+                
+                # Iterate through the dictionaries and test each model
+                for name, model in all_models.items():
 
-            try:
+                    try:
+                        
+                        logging.info(f"Testing Model: {model}")
 
-                # train the model
-                model.fit(X=self.X_train, y=self.y_train)
-    
-                # make a prediction
-                prediction = model.predict(X=self.X_val)
-    
-                # measure results
-                r2 = r2_score(y_true=self.y_val, y_pred=prediction)
-                mae = mean_absolute_error(y_true=self.y_val, y_pred=prediction)
-                mse = mean_squared_error(y_true=self.y_val, y_pred=prediction)
-    
-                # store metrics in result dict
-                results[name] = {
-                    'R2_Score': round(r2, 2),
-                    'MAE_Score': float(round(mae, 2)),
-                    'MSE_Score': float(round(mse, 2))
-                }
-    
-                # Update current model and metrics if r2 score of model on current iteration is higher than what is stored
-                if r2 > self.r2:
-                    self.current_model_name = name
-                    self.current_model = model
-                    self.r2 = r2
-                    self.mae = mae
-                    self.mse = mse
+                        # train the model
+                        model.fit(X=self.X_train, y=self.y_train)
+                        logging.info(f"Training Model: {model}")
+            
+                        # make a prediction
+                        prediction = model.predict(X=self.X_val)
+            
+                        # measure results
+                        r2 = r2_score(y_true=self.y_val, y_pred=prediction)
+                        mae = mean_absolute_error(y_true=self.y_val, y_pred=prediction)
+                        mse = mean_squared_error(y_true=self.y_val, y_pred=prediction)
+            
+                        # store metrics in result dict
+                        results[name] = {
+                            'R2_Score': round(r2, 2),
+                            'MAE_Score': float(round(mae, 2)),
+                            'MSE_Score': float(round(mse, 2))
+                        }
+            
+                        # Update current model and metrics if r2 score of model on current iteration is higher than what is stored
+                        if r2 > self.r2:
+                            self.current_model_name = name
+                            self.current_model = model
+                            self.r2 = r2
+                            self.mae = mae
+                            self.mse = mse
+                            
+                            logging.info(f"Model {model} is the best model so far for our dataset.")
 
-            except Exception as e:
-                print(f"Received error: {e}.")
+                    except Exception as e:
+                        logging.error(f"Received error: {e}.")
+                        return None
 
-        # Sort the results by R2 score in descending order
-        sorted_results = dict(sorted(results.items(), key=lambda x: x[1]['R2_Score'], reverse=True))
+            # Sort the results by R2 score in descending order
+            sorted_results = dict(sorted(results.items(), key=lambda x: x[1]['R2_Score'], reverse=True))
+            logging.info("Each model has been tested. Results have been sorted from best -> worst.")
+            
+            # print the top model
+            logging.info(f"Top Model: {self.current_model_name} | R2 Score: {self.r2}")
 
-        # print the top model
-        print(f"Top Model: {self.current_model_name} | R2 Score: {self.r2}")
-
-        return sorted_results
+            return sorted_results
+        
+        except Exception as e:
+            logging.info(f"Unable to get the best models. Received error {e}")
+            return None
 
     def optimize_gradient_boosting_model(self, optimize_method: str, n_iterations: int):
         """
