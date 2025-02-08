@@ -1,0 +1,160 @@
+INFO - classes.py - 49 - Opening file /Users/aryanvafadar/Documents/GitHub/machine_learning_models/files/input_files/house_prices_data.csv to create into a pandas dataframe.
+INFO - classes.py - 55 - Initial DataFrame successfully created and set to self.initial_frame
+INFO - classes.py - 56 - Shape of Initial Frame: (21613, 21)
+INFO - classes.py - 57 - Initial Frame Columns: Index(['id', 'date', 'price', 'bedrooms', 'bathrooms', 'sqft_living',
+       'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade',
+       'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode',
+       'lat', 'long', 'sqft_living15', 'sqft_lot15'],
+      dtype='object')
+INFO - classes.py - 58 - Initial Frame DataTypes: {'id': dtype('int64'), 'date': dtype('O'), 'price': dtype('float64'), 'bedrooms': dtype('int64'), 'bathrooms': dtype('float64'), 'sqft_living': dtype('int64'), 'sqft_lot': dtype('int64'), 'floors': dtype('float64'), 'waterfront': dtype('int64'), 'view': dtype('int64'), 'condition': dtype('int64'), 'grade': dtype('int64'), 'sqft_above': dtype('int64'), 'sqft_basement': dtype('int64'), 'yr_built': dtype('int64'), 'yr_renovated': dtype('int64'), 'zipcode': dtype('int64'), 'lat': dtype('float64'), 'long': dtype('float64'), 'sqft_living15': dtype('int64'), 'sqft_lot15': dtype('int64')}
+INFO - classes.py - 59 - Intial Frame Contains Null Values?: id               False
+date             False
+price            False
+bedrooms         False
+bathrooms        False
+sqft_living      False
+sqft_lot         False
+floors           False
+waterfront       False
+view             False
+condition        False
+grade            False
+sqft_above       False
+sqft_basement    False
+yr_built         False
+yr_renovated     False
+zipcode          False
+lat              False
+long             False
+sqft_living15    False
+sqft_lot15       False
+dtype: bool
+INFO - classes.py - 60 - Total Number of Null Values in Each Column: id               0
+date             0
+price            0
+bedrooms         0
+bathrooms        0
+sqft_living      0
+sqft_lot         0
+floors           0
+waterfront       0
+view             0
+condition        0
+grade            0
+sqft_above       0
+sqft_basement    0
+yr_built         0
+yr_renovated     0
+zipcode          0
+lat              0
+long             0
+sqft_living15    0
+sqft_lot15       0
+dtype: int64
+INFO - classes.py - 84 - remove_columns function called. List of columns to remove: ['id', 'date', 'yr_renovated', 'zipcode', 'lat', 'long']
+INFO - classes.py - 88 - Current columns in the dataframe: ['id', 'date', 'price', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15']
+INFO - classes.py - 92 - Requested to remove columns have been set to lowercase.
+INFO - classes.py - 101 - All columns exist within the DataFrame, and will be removed.
+INFO - classes.py - 108 - Columns ['id', 'date', 'yr_renovated', 'zipcode', 'lat', 'long'] have been removed from the dataframe.
+INFO - classes.py - 109 - Columns that remain in the frame: ['price', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'sqft_living15', 'sqft_lot15'].
+INFO - classes.py - 135 - Label price exists in the dataframe. Attempting to remove...
+INFO - classes.py - 139 - Label column has been removed from the dataframe, and will be reinserted at the end.
+INFO - classes.py - 140 - Label Column: 0        221900.0
+1        538000.0
+2        180000.0
+3        604000.0
+4        510000.0
+           ...   
+21608    360000.0
+21609    400000.0
+21610    402101.0
+21611    400000.0
+21612    325000.0
+Name: price, Length: 21613, dtype: float64
+INFO - classes.py - 144 - Label column added back to the dataframe.
+INFO - classes.py - 145 - Sample of new self.initial_frame:        bedrooms  bathrooms  sqft_living  sqft_lot  floors  waterfront  view  condition  grade  sqft_above  sqft_basement  yr_built  sqft_living15  sqft_lot15      price
+20403         3       1.50         1270      2356     2.0           0     0          3      7        1270              0      2012           1490        2175   160797.0
+16340         2       0.75          660      5240     1.0           0     0          4      4         660              0      1912            850        5080   100000.0
+6686          3       1.75         1640      4860     1.0           0     0          3      8        1200            440      1965           1480        7200   369950.0
+15120         3       2.50         2860      4500     2.0           0     2          3      8        1980            880      1915           2310        4500  1225000.0
+10196         5       1.50         1700      7200     1.5           0     0          3      7        1700              0      1937           1460        7194   548000.0
+10991         2       1.00         1150      7552     1.0           0     0          3      7        1150              0      1951           1150        7346   349000.0
+9119          4       2.25         1740      9613     2.0           0     0          5      8        1740              0      1989           1680        9769   300000.0
+14365         3       1.00         1250      9035     1.0           0     0          4      7        1250              0      1970           1350       10425   230000.0
+5269          3       2.50         2074      4900     2.0           0     0          3      8        2074              0      1997           1840        7382   515100.0
+4494          5       1.75         1400      5071     1.0           0     0          3      5        1400              0      1916           1200        7500   425000.0
+INFO - classes.py - 161 - Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.
+INFO - classes.py - 166 - Whitespaces from column headers have been removed.
+INFO - classes.py - 170 - Whitespaces removed from rows/samples in the dataset.
+INFO - classes.py - 174 - Special characters, symbols and commas removed from the frame.
+INFO - classes.py - 176 - Self.initial_frame has been cleaned. New cleaned frame has been set to self.cleaned_frame
+INFO - classes.py - 196 - Frame encoding function has been called. All string data will be converted to numeric (int).
+INFO - classes.py - 201 - Self.cleaned_frame has been copied.
+INFO - classes.py - 205 - SkLearn OneHotEncoder has been instantiated.
+INFO - classes.py - 208 - Iterating through the dataframe to search for columns whose data is of type object.
+INFO - classes.py - 247 - Dataframe has finished being encoded. Label/Target column will now be removed and re-added to the end of the frame.
+INFO - classes.py - 250 - Label column price has been removed and readded to the end of the dataframe.
+INFO - classes.py - 497 - Get features and labels function has been called.
+INFO - classes.py - 506 - Columns in DataFrame: ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'sqft_living15', 'sqft_lot15', 'price']
+INFO - classes.py - 514 - List of Features: ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'sqft_living15', 'sqft_lot15']. These columns will be used to create our X variable.
+INFO - classes.py - 515 - List of Labels: price. This will be used for our y variable.
+INFO - classes.py - 519 - X DataFrame created, and will be used for train_test_split. X Frame Shape: (21613, 14)
+INFO - classes.py - 520 - y DataFrame created, and will be used for train_test_split. y Frame Shape: (21613,)
+INFO - classes.py - 525 - X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.
+INFO - classes.py - 526 - First Split Test Size: 0.3
+INFO - classes.py - 527 - Size X_train_full: (15129, 14) | Size X_test: (6484, 14)
+INFO - classes.py - 528 - Size of y_train_full: (15129,) | Size y_test: (6484,)
+INFO - classes.py - 532 - X_train_full and y_train_full have been split again to create training and testing data to train and tune our model. These new variables (X_train, X_val, y_train, y_val) should only be used to find which model works best on our dataset, and then subsequently tuning this model.
+INFO - classes.py - 533 - Size X_train: (12103, 14) | Size X_val: (3026, 14)
+INFO - classes.py - 534 - Size of y_train: (12103,) | Size y_val: (6484,)
+INFO - classes.py - 536 - Testing and Training data have successfully been created. Ready now to get the best model.
+INFO - classes.py - 555 - get_best_models function has been called.
+INFO - classes.py - 579 - List of models to test: {'linear_regression': LinearRegression(), 'ridge_regression': Ridge(), 'lasso_regression': Lasso(), 'linear_support_vector': LinearSVR(), 'gaussian_regressor': GaussianProcessRegressor(), 'gradient_boosting': GradientBoostingRegressor(), 'hist_boosting': HistGradientBoostingRegressor(), 'random_forest': RandomForestRegressor()}
+INFO - classes.py - 586 - Testing each model in the all_models dict now.
+INFO - classes.py - 588 - User passed in 1 number of iterations. We will run the model testing this amount of times.
+INFO - classes.py - 591 - Model Run: 1
+INFO - classes.py - 598 - Testing Model: LinearRegression()
+INFO - classes.py - 602 - Training Model: LinearRegression()
+INFO - classes.py - 627 - Model LinearRegression() is the best model so far for our dataset.
+INFO - classes.py - 598 - Testing Model: Ridge()
+INFO - classes.py - 602 - Training Model: Ridge()
+INFO - classes.py - 598 - Testing Model: Lasso()
+INFO - classes.py - 602 - Training Model: Lasso()
+INFO - classes.py - 598 - Testing Model: LinearSVR()
+INFO - classes.py - 602 - Training Model: LinearSVR()
+INFO - classes.py - 598 - Testing Model: GaussianProcessRegressor()
+INFO - classes.py - 602 - Training Model: GaussianProcessRegressor()
+INFO - classes.py - 598 - Testing Model: GradientBoostingRegressor()
+INFO - classes.py - 602 - Training Model: GradientBoostingRegressor()
+INFO - classes.py - 627 - Model GradientBoostingRegressor() is the best model so far for our dataset.
+INFO - classes.py - 598 - Testing Model: HistGradientBoostingRegressor()
+INFO - classes.py - 602 - Training Model: HistGradientBoostingRegressor()
+INFO - classes.py - 627 - Model HistGradientBoostingRegressor() is the best model so far for our dataset.
+INFO - classes.py - 598 - Testing Model: RandomForestRegressor()
+INFO - classes.py - 602 - Training Model: RandomForestRegressor()
+INFO - classes.py - 591 - Model Run: 2
+INFO - classes.py - 598 - Testing Model: LinearRegression()
+INFO - classes.py - 602 - Training Model: LinearRegression()
+INFO - classes.py - 598 - Testing Model: Ridge()
+INFO - classes.py - 602 - Training Model: Ridge()
+INFO - classes.py - 598 - Testing Model: Lasso()
+INFO - classes.py - 602 - Training Model: Lasso()
+INFO - classes.py - 598 - Testing Model: LinearSVR()
+INFO - classes.py - 602 - Training Model: LinearSVR()
+INFO - classes.py - 598 - Testing Model: GaussianProcessRegressor()
+INFO - classes.py - 602 - Training Model: GaussianProcessRegressor()
+INFO - classes.py - 598 - Testing Model: GradientBoostingRegressor()
+INFO - classes.py - 602 - Training Model: GradientBoostingRegressor()
+INFO - classes.py - 598 - Testing Model: HistGradientBoostingRegressor()
+INFO - classes.py - 602 - Training Model: HistGradientBoostingRegressor()
+INFO - classes.py - 627 - Model HistGradientBoostingRegressor() is the best model so far for our dataset.
+INFO - classes.py - 598 - Testing Model: RandomForestRegressor()
+INFO - classes.py - 602 - Training Model: RandomForestRegressor()
+INFO - classes.py - 635 - Each model has been tested. Results have been sorted from best -> worst.
+INFO - classes.py - 638 - Top Model: hist_boosting | R2 Score: 0.7449029585394318
+INFO - classes.py - 738 - Optimize HistBoosting Model function has been called.
+INFO - classes.py - 753 - Number of Samples: 12103 | Number of Features: 14
+INFO - classes.py - 757 - Number of Splits for RepeatedKFold: 5
+INFO - classes.py - 829 - Best Params for HistGradientBoostingRegressor(): {'learning_rate': np.float64(0.026534089520061914), 'loss': 'poisson', 'max_depth': 10, 'max_iter': 949, 'max_leaf_nodes': 10, 'min_samples_leaf': 29}
+INFO - classes.py - 830 - Best Score using best params: 0.7428181822646563
+INFO - classes.py - 832 - Cross validation successfully performed.

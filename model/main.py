@@ -26,9 +26,12 @@ def main():
     # get the best models for our dataset
     top_models = rmt.get_best_models(n_iterations=5)
     
+    # tune the model
+    rmt.optimize_hist_boosting_model(optimize_method='random', n_iterations=1000)
+    
     
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
     """Instantiate the DatasetCreator class"""
     csv_file = config.get_input_csv() # call get_csv function to get the csv file needed for our dataset object

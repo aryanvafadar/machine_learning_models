@@ -9,7 +9,7 @@ from config import output_files_folder, get_prediction_csv, get_ml_file
 # import sklearn metrics, preprocessing and training/testing data splits
 from sklearn.base import clone
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, RepeatedKFold
 
 # import linear models
@@ -267,6 +267,162 @@ class DatasetCreator:
         print(null_values_by_column)
 
     @staticmethod
+    def date_to_datetime(frame: pd.DataFrame, column_name: str, errors: str, drop_original_column: bool, datetime_cols: list) -> pd.DataFrame:
+        """
+        Converts the date column of a pandas DataFrame into a datetime format and adds additional columns such as year, month, and day.
+
+        Args:
+            - frame (pd.DataFrame): A pandas DataFrame.
+            - column_name (str): The name of the date column in the DataFrame.
+            - errors (str): How errors should be handled: 'ignore', 'raise', or 'coerce'.
+            - drop_original_column (bool): Whether to drop the original date column from the DataFrame.
+            - datetime_cols (list): List of datetime attributes to add. Options: 'year', 'month', 'day', 'weekday'.
+
+        Returns:
+            pd.DataFrame: The modified DataFrame with new datetime columns added, or None if an error occurs.
+        """
+        logging.info("Date to Datetime function has been called.")
+
+        # Ensure the column names are in lowercase for consistency
+        frame.columns = frame.columns.str.lower()
+        column_name = column_name.lower()
+
+        if column_name not in frame.columns:
+            logging.error(f"Column '{column_name}' not found in the DataFrame columns: {frame.columns.tolist()}")
+            return None
+
+        logging.info(f"Date column '{column_name}' exists in the DataFrame.")
+
+        # Validate the datetime columns
+        valid_datetime_attrs = {'year', 'month', 'day', 'weekday'}
+        datetime_cols = [col.lower() for col in datetime_cols]
+        invalid_cols = set(datetime_cols) - valid_datetime_attrs
+
+        if invalid_cols:
+            logging.error(f"Invalid datetime columns requested: {invalid_cols}. Valid options are: {valid_datetime_attrs}")
+            return None
+
+        logging.info("All datetime columns requested are valid.")
+
+        try:
+            # Convert the date column to datetime format
+            frame[column_name] = pd.to_datetime(frame[column_name], errors=errors.lower())
+            logging.info(f"Date column '{column_name}' successfully converted to datetime format.")
+
+            # Drop the original date column if requested
+            if drop_original_column:
+                frame.drop(columns=[column_name], inplace=True)
+                logging.info("Original date column has been dropped from the DataFrame.")
+            else:
+                logging.info("Original date column has been retained in the DataFrame.")
+
+            # Add the requested datetime attributes as new columns
+            for col in datetime_cols:
+                if col == 'year':
+                    frame['year'] = frame[column_name].dt.year
+                elif col == 'month':
+                    frame['month'] = frame[column_name].dt.month
+                elif col == 'day':
+                    frame['day'] = frame[column_name].dt.day
+                elif col == 'weekday':
+                    frame['weekday'] = frame[column_name].dt.dayofweek  # Monday = 0, Sunday = 6
+
+                logging.info(f"Datetime attribute '{col}' has been added to the DataFrame.")
+
+            logging.info(f"Final DataFrame columns after datetime processing: {frame.columns.tolist()}")
+            return frame
+
+        except Exception as e:
+            logging.error(f"Failed to convert date column to datetime format. Error: {e}")
+            return None
+    
+    @staticmethod
+    def calc_percent_change(frame: pd.DataFrame, num_columns: list, ascend: bool, multiply_by_100: bool) -> pd.DataFrame:
+        """
+        Takes a pandas dataframe and calculates percent changes on the requested columns.
+        
+        Args:
+            - frame (pd.DataFrame): A pandas dataframe.
+            - num_columns (list): A list of numeric columns to calculate percentage change on.
+            - ascend (bool): If True, calculates the percent change from oldest to newest record (bottom to top). If false, calculates the percent change from top to bottom.
+            - multiply_by_100 (bool): If True, multiplies the calculated percent change value by 100. If false, does not multiply by 100.
+        
+        Returns:
+            - If successful, returns a new pandas dataframe.
+            - If unsuccessful, returns none.
+        """
+        
+        # check if frame is empty
+        if frame.empty:
+            logging.error("The input DataFrame is empty. Please provide a non-empty DataFrame.")
+            return None
+        
+        # check if frame is a dataframe
+        if not isinstance(frame, pd.DataFrame):
+            logging.error("Frame argument is not of type pandas dataframe. Please try again.")
+            return None
+        
+        # set column heads and num_list to lower_case
+        frame.columns = frame.columns.str.strip().str.lower()
+        num_columns = [col.lower() for col in num_columns]
+        
+        try:
+            
+            # check if all columns in num_columns exist in the dataframe
+            invalid_cols = set(num_columns) - set(frame.columns)
+            if invalid_cols:
+                logging.error(f"Not all columns passed in by num_columns exist in the dataframe. Invalid cols: {invalid_cols}")
+                return None
+            
+            # check ascend is a bool
+            if not isinstance(ascend, bool):
+                logging.error("Ascend argument is not of type bool. Please try again.")
+                return None
+            
+            # check each column passed into num_columns is numeric
+            for col in num_columns:
+                try:
+                    pd.to_numeric(arg=frame[col], errors='raise')
+                    
+                except Exception as e:
+                    logging.error(f"Unable to convert column '{col}' to numeric. Received error {e}")
+                    return None
+                
+            # Check if ascend is true. If it is, reverse the frame
+            if ascend:
+                frame = frame[::-1]
+                logging.info(f"Frame successfully reversed.")
+            
+            # Calculate the percent change for each column
+            for col in num_columns:
+                percent_col_name = f"{col}_percent_change"
+                frame[percent_col_name] = frame[col].pct_change()
+                logging.info(f"Percent change column calculated and added for column {col}")
+            
+            # If ascen is true, reverse the frame back to the original order
+            if ascend:
+                frame = frame[::-1]
+                logging.info("Frame successfully unreversed.")
+            
+            # if multiply_by_100 is true, multiply the new colums by 100
+            if multiply_by_100:
+                
+                # get list of new column names
+                percent_change_cols = [f"{col}_percent_change" for col in num_columns]
+                
+                # multiply the columbs by 100
+                frame[percent_change_cols] *= 100
+                
+                logging.info(f"Columns {percent_change_cols} have been multipled by 100.")
+             
+            # return the final frame    
+            return frame
+            
+        except Exception as e:
+            logging.error(f"Unable to calculate percent change. Received error {e}")
+            return None
+            
+    @staticmethod
     def export_frame_to_csv(frame: pd.DataFrame, file_name: str, output_folder=output_files_folder) -> True:
         """Converts a dataframe to a csv_file. Takes in 2 arguments; an output file folder and the file name"""
         try:
@@ -295,13 +451,16 @@ class RegModelTester:
         self.frame = frame 
         
         # Initialize split data attributes
+        # After first split
         self.X_train_full = None # Only used to help split the 2nd dataset and run a final training run with our tuned model
         self.X_test = None # Use at the end only, to test the trained and tuned model on unseen data (test set)
         self.y_train_full = None # Only used to help split the 2nd dataset and run a final training run on our turned model
         self.y_test = None # Use at the end only, to test the trained and tuned model on unseen data (test set)
-        self.X_train = None # Use to train the model
+        
+        # After second split
+        self.X_train = None # Use to train the best model and to-be tuned model
         self.X_val = None # Use to find the best model and validate (tune hyperparams)
-        self.y_train = None # Use to train the model
+        self.y_train = None # Use to train the best model and to-be tuned model
         self.y_val = None # Use to find the best model and validate (tune hyperparams)
 
         # metric scores from model tester
@@ -363,6 +522,11 @@ class RegModelTester:
             # Split the data into train-test and train-validation sets
             self.X_train_full, self.X_test, self.y_train_full, self.y_test = train_test_split(X, y, test_size=model_test_size, random_state=6712792)
             
+            # Standardize the Data
+            scaler = StandardScaler()
+            self.X_train_full = scaler.fit_transform(self.X_train_full)
+            self.y_train_full = scaler.fit_transform(self.y_train_full)
+            
             logging.info("X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.")
             logging.info(f"First Split Test Size: {model_test_size}")
             logging.info(f"Size X_train_full: {self.X_train_full.shape} | Size X_test: {self.X_test.shape}")
@@ -381,7 +545,7 @@ class RegModelTester:
             print(f"Error in get_features_labels: {e}")
             return False
             
-    def get_best_models(self, n_iterations: int) -> dict:
+    def get_best_models(self, n_iterations: int) -> dict:   
         
         """
         Iterates through the DataFrame passed in through RegModelTester() to find the best model for the dataset. The best model has its name, model and scores set to self.
@@ -398,9 +562,9 @@ class RegModelTester:
         # dict of linear models
         linear_models = {
             'linear_regression': LinearRegression(),
-            'ridge_regression': Ridge(alpha=1.0),
-            'lasso_regression': Lasso(alpha=1.0),
-            'linear_support_vector': LinearSVR(),
+            'ridge_regression': Ridge(alpha=1.0, max_iter=10000),
+            'lasso_regression': Lasso(alpha=1.0, max_iter=10000),
+            'linear_support_vector': LinearSVR(max_iter=10000),
         }
 
         # dict of non-linear models
@@ -486,82 +650,62 @@ class RegModelTester:
 
     def optimize_gradient_boosting_model(self, optimize_method: str, n_iterations: int):
         """
-        Optimize parameters for a gradient boosting model. All possible variables for each parameter is tested.
-        This function should only be used if the current_model is GradientBoostingRegressor.
-        
+        Optimize parameters for a Gradient Boosting model.
+
         Arguments:
-            - optimize_method (str): Can only be grid or random, depending on the optimization method the user would like to use.
+            - optimize_method (str): Can only be 'grid' or 'random' to select the optimization method.
+            - n_iterations (int): Number of iterations for RandomSearchCV.
         """
-        
-        # execute GridSearchCV
-        if optimize_method.lower() == 'grid':
-        
-            try:
-                
-                # check if the current model is the gradientboostingregressor
-                if not isinstance(self.current_model, GradientBoostingRegressor):
-                    raise TypeError("This optimization function is only applicable for Gradient Boosting models.")
-                
-                # get number of samples (rows) and features (columns) from our training set
-                n_rows, n_samples = self.X_train.shape
-                
-                # dynamically select number of splits
-                n_splits = 5 if n_samples > 5000 else 3
-                
-                # Instantiate our repeater; standard to do 10 x 10
-                repeat = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
-                
-                # parameters to test
-                params = {
-                    'n_estimators': [50, 100, 150, 250, 500, 750] if n_samples < 5000 else [100, 250, 500, 750, 1000, 1500],
-                    'max_depth': list(range(2, 10)) if n_samples < 5000 else list(range(5, 25, 2)),
-                    'loss': ['squared_error', 'absolute_error', 'huber', 'quantile']
-                }
-                
-                # instantiate a grid search cross-validator
-                grid_cv = GridSearchCV(estimator=self.current_model, param_grid=params, n_jobs=1, cv=repeat, scoring='r2', refit=True)
-                
-                # perform the grid search
-                grid_cv.fit(X=self.X_train, y=self.y_train)
-                
-                # get best params
-                best_gc_params = grid_cv.best_params_
-                best_gc_results = grid_cv.best_score_
-                print(f"Best Score: {best_gc_results}")
-                print(f"Best Parameters: {best_gc_params}")
-                
-                self.best_params = best_gc_params
-                self.best_score = best_gc_results
-                
-            except Exception as e:
-                print(f"Unable to execute optimize_gradient_boosting_model. Received error {e}")
-        
-        # execute RandomSearchCV
-        elif optimize_method.lower() == 'random':
-            
-            try:
-                
-                """
-                Instead of manually setting values in our parameters for the cross-validator to test, we can instead pass ranges of values for each parameter for the validator to test. This allows us to explore a wide array of parameter combinations.
-                """
-                params = {
-                    'n_estimators': stats.randint(50, 1000), # Choose a random integer between 50 - 10000
-                    'max_depth': stats.randint(2, 20), # Choose a random integer between 2, 20
-                    'learning_rate': stats.uniform(0.01, 0.1) # Choose a random float between 0.01 and 0.1
-                }
-                
-                n_samples, n_features = self.X_train.shape
-                n_splits = 5 if n_samples > 5000 else 3
-                
-                repeat = RepeatedKFold(
-                    n_splits=n_splits,
-                    n_repeats=2
+
+        try:
+            # Ensure current model is a GradientBoostingRegressor
+            if not isinstance(self.current_model, GradientBoostingRegressor):
+                logging.error("This optimization function is only applicable for Gradient Boosting models.")
+
+            # Get the number of samples and features from the training set
+            n_samples, n_features = self.X_train.shape
+            n_splits = 5 if n_samples > 5000 else 3  # Dynamically select number of splits
+
+            # Instantiate the cross-validation strategy
+            repeat = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
+
+            # Define parameter grids for both optimization methods
+            grid_params = {
+                'n_estimators': [50, 100, 150, 250, 500, 750] if n_samples < 5000 else [100, 250, 500, 750, 1000, 1500],
+                'max_depth': list(range(2, 10)) if n_samples < 5000 else list(range(5, 25, 2)),
+                'loss': ['squared_error', 'absolute_error', 'huber', 'quantile']
+            }
+
+            random_params = {
+                'n_estimators': stats.randint(50, 1000),
+                'max_depth': stats.randint(2, 20),
+                'learning_rate': stats.uniform(0.01, 0.1)
+            }
+
+            if optimize_method.lower() == 'grid':
+                # Perform GridSearchCV
+                grid_cv = GridSearchCV(
+                    estimator=self.current_model,
+                    param_grid=grid_params,
+                    n_jobs=-1,
+                    cv=repeat,
+                    scoring='r2',
+                    refit=True
                 )
-                
-                # Instantiate our randomsearchcv object
+                grid_cv.fit(self.X_train, self.y_train)
+
+                # Store the best results
+                self.best_params = grid_cv.best_params_
+                self.best_score = grid_cv.best_score_
+
+                logging.info(f"GridSearch Best Score: {self.best_score}")
+                logging.info(f"GridSearch Best Parameters: {self.best_params}")
+
+            elif optimize_method.lower() == 'random':
+                # Perform RandomizedSearchCV
                 random_search = RandomizedSearchCV(
                     estimator=self.current_model,
-                    param_distributions=params,
+                    param_distributions=random_params,
                     n_iter=n_iterations,
                     scoring='r2',
                     n_jobs=-1,
@@ -569,26 +713,132 @@ class RegModelTester:
                     cv=repeat,
                     random_state=6712792
                 )
+                random_search.fit(self.X_train, self.y_train)
+
+                # Store the best results
+                self.best_score = random_search.best_score_
+                self.best_params = random_search.best_params_
+
+                logging.info(f"RandomSearch Best Score: {self.best_score}")
+                logging.info(f"RandomSearch Best Parameters: {self.best_params}")
+
+            else:
+                logging.error(f"Invalid optimize_method argument: {optimize_method}. Expected 'grid' or 'random'.")
+                return None
+
+        except Exception as e:
+            logging.error(f"Error in optimizing Gradient Boosting model: {e}")
+        
+    def optimize_hist_boosting_model(self, optimize_method: str, n_iterations: int):
+        """
+        Optimize parameters for a HistBoosting model. All possible variables for each parameter is tested.
+        
+        This function should only be used if the current_model is HistGradientBoostingRegressor
+        
+        Args:
+            - optimize_method (str): Can be 'grid' or 'random'. The selection determines whether the function uses GridSearchCV or RandomSearchCV.
+            - n_iterations (int): Number of times we want to our cross-validator to run.
+        """
+        
+        logging.info("Optimize HistBoosting Model function has been called.")
+        
+        # check if current_model is HistGradientBoostingRegressor
+        if not isinstance(self.current_model, HistGradientBoostingRegressor):
+            logging.error(f"This optimization function is only available on the HistGradientBoostingRegressor model. The current model is {self.current_model}.")
+            return None
+        
+        # check optimize method is grid or random
+        optimize_method = optimize_method.lower()
+        if not optimize_method in ['grid', 'random']:
+            logging.error(f"Optimization Method is not valid. Received {optimize_method}. Expected 'grid' or 'random'.")
+            return None
+        
+        # get number of samples (rows) and features (columns) from our training frame
+        n_samples, n_features = self.X_train.shape
+        logging.info(f"Number of Samples: {n_samples} | Number of Features: {n_features}")
+        
+        # dynamically select the number of splits for RepeatedKFold
+        n_splits = 5 if n_samples > 5000 else 3
+        logging.info(f"Number of Splits for RepeatedKFold: {n_splits}")
+        
+        # Instantiate the cross-validation strategy
+        repeater = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
+        
+        # Set the grid and random params
+        grid_params = {
+            "loss": ['squared_error', 'absolute_error', 'gamma', 'poisson', 'quantile'],
+            "quantile": [0.1, 0.5, 0.9],  # Only required if 'quantile' is a selected loss function
+            "max_iter": [50, 100, 150, 250, 500, 750, 1000] if n_samples < 5000 else [100, 250, 500, 750, 1000, 1500],
+            "max_depth": list(range(2, 10)) if n_samples < 5000 else list(range(5, 25, 2)),
+            "min_samples_leaf": list(range(5, 20)) if n_samples < 5000 else list(range(10, 30))
+        }
+        
+        random_params = {
+            "loss": ['squared_error', 'absolute_error', 'gamma', 'poisson', 'quantile'],
+            "learning_rate": stats.uniform(0.01, 0.1),
+            "max_iter": stats.randint(20, 1000),
+            "max_leaf_nodes": stats.randint(10, 50),
+            "max_depth": stats.randint(5, 50),
+            "min_samples_leaf": stats.randint(5, 50)
+        }
+        
+        # perform cross-validation based on the optimization_method requested by the user
+        try:
+            
+            # optimize_method = 'grid'
+            if optimize_method == 'grid':
+                
+                # instantiate GridSearchCV and pass in the arguments
+                gridcv = GridSearchCV(
+                    estimator=self.current_model,
+                    param_grid=grid_params,
+                    scoring='r2',
+                    n_jobs=-1,
+                    refit=True,
+                    cv=repeater
+                )
+                
+                # train the model 
+                gridcv.fit(X=self.X_train, y=self.y_train)
+                
+                # store the best params
+                self.best_params = gridcv.best_params_
+                self.best_score = gridcv.best_score_
+                
+                # log results
+                logging.info(f"Best Params for {self.current_model}: {self.best_params}")
+                logging.info(f"Best Score using best params: {self.best_score}")
+            
+            # optimize_method = 'random'
+            if optimize_method == 'random':
+                
+                # instantiate randomsearchcv
+                randcv = RandomizedSearchCV(
+                    estimator=self.current_model,
+                    param_distributions=random_params,
+                    n_iter=n_iterations,
+                    scoring='r2',
+                    n_jobs=-1,
+                    refit=True,
+                    cv=repeater,
+                    random_state=6712792
+                )
                 
                 # train the model
-                random_search.fit(X=self.X_train, y=self.y_train)
+                randcv.fit(X=self.X_train, y=self.y_train)
                 
-                # get scores
-                best_rcv_score = random_search.best_score_
-                best_rcv_params = random_search.best_params_
-                print(f"Best RandomSearch Score: {best_rcv_score}")
-                print(f"Best RandomSearch Params: {best_rcv_params}")
+                # store the best scores and params
+                self.best_params = randcv.best_params_
+                self.best_score = randcv.best_score_
                 
-                self.best_score = best_rcv_score
-                self.best_params = best_rcv_params
+                # log the results
+                logging.info(f"Best Params for {self.current_model}: {self.best_params}")
+                logging.info(f"Best Score using best params: {self.best_score}")
                 
+            logging.info(f"Cross validation successfully performed.")
             
-            except Exception as e:
-                print(f"Unable to execute RandomSearchCV. Received error {e}")
-                
-        else:
-            print(f"Incorrect argument passed to optimize_method. Expected 'grid' or 'random'. Instead received {optimize_method}.")
-            return None
+        except Exception as e:
+            logging.error(f"Unable to perform cross-validation. Received error {e}")
         
     def final_evaluation(self):
         """
