@@ -26,13 +26,13 @@ def get_input_csv() -> list:
         
         # If number of files is greater than 1, ask user which file they want to use
         elif len(csv_files) > 1:
-            print(f"More than 1 CSV file found in the input_files folder. Listing all files found:")
+            print("More than 1 CSV file found in the input_files folder. Listing all files found:")
             
             for idx, data_file in enumerate(csv_files, start=1):
                 print(f"File {idx}: {data_file}")
             
             while True:    
-                file_selection = int(input("Enter File Number to use:"))
+                file_selection = int(input("Enter File Number to use:")) - 1
                 
                 if csv_files[file_selection] is None:
                     print(f"Invalid file selection. You selected {file_selection}, which is not in the list of files.")

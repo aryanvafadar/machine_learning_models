@@ -13,12 +13,13 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, RepeatedKFold
 
 # import linear models
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.svm import LinearSVR
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, HuberRegressor
+from sklearn.svm import LinearSVR, SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.naive_bayes import GaussianNB
-from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor, ExtraTreesRegressor, BaggingRegressor, AdaBoostRegressor
+from sklearn.neural_network import MLPRegressor
 
 
 """ DataFrame Creator Class"""
@@ -95,7 +96,7 @@ class DatasetCreator:
             missing_cols = set(cols_to_remove) - set(current_cols)
             if missing_cols:
                 logging.error(f"Columns not found in the dataframe: {missing_cols}. Please remove and retry.")
-                return False
+                raise Exception
             
             # if all columns exist in the DataFrame, log and remove the columns
             logging.info("All columns exist within the DataFrame, and will be removed.")
@@ -115,6 +116,81 @@ class DatasetCreator:
             logging.error(f"Unable to remove columns from the initial frame. Received error {e}")
             return False
     
+    def handle_nulls(self, handle_method: list[str], column: list[str], fill_value=None, replace_value=None) -> pd.DataFrame:
+        """
+        Handle null values within the DataFrame.
+
+        Args:
+            - handle_method (list[str]): List of methods to handle nulls. Options: 'drop_all', 'fill_all', 'back_fill', 'forward_fill', 'replace_all', 'interpolate'.
+            - column (list[str]): List of columns where null handling should be applied.
+            - fill_value (optional): Value to use for 'fill_all' method.
+            - replace_value (optional): Value to use for 'replace_all' method.
+
+        Returns:
+            - Updated DataFrame or None if an error occurs.
+        """
+        frame = self.initial_frame.copy()
+        available_methods = ['drop_all', 'fill_all', 'back_fill', 'forward_fill', 'replace_all', 'interpolate']
+
+        # Normalize column names and method inputs
+        frame_columns = frame.columns.str.lower()
+        handle_method = [method.lower() for method in handle_method]
+        column = [col.lower() for col in column]
+
+        # Validate input lengths
+        if len(handle_method) != len(column):
+            logging.error(f"Mismatch between methods and columns. Methods: {len(handle_method)}, Columns: {len(column)}.")
+            return None
+
+        # Validate method and column names
+        invalid_methods = set(handle_method) - set(available_methods)
+        invalid_columns = set(column) - set(frame_columns)
+        if invalid_methods or invalid_columns:
+            logging.error(f"Invalid input detected. Methods: {invalid_methods}, Columns: {invalid_columns}.")
+            return None
+
+        try:
+            # Apply null handling methods to each column
+            for method, col in zip(handle_method, column):
+                if method == 'fill_all':
+                    if fill_value is None:
+                        logging.error("fill_value is required for 'fill_all' method.")
+                        return None
+                    frame[col] = frame[col].fillna(value=fill_value)
+                    logging.info(f"Filled nulls in column '{col}' with '{fill_value}'.")
+                elif method == 'back_fill':
+                    frame[col] = frame[col].fillna(method='bfill')
+                    logging.info(f"Backfilled nulls in column '{col}'.")
+                elif method == 'forward_fill':
+                    frame[col] = frame[col].fillna(method='ffill')
+                    logging.info(f"Forward-filled nulls in column '{col}'.")
+                elif method == 'replace_all':
+                    if replace_value is None:
+                        logging.error("replace_value is required for 'replace_all' method.")
+                        return None
+                    frame[col] = frame[col].replace(to_replace=np.nan, value=replace_value)
+                    logging.info(f"Replaced nulls in column '{col}' with '{replace_value}'.")
+                elif method == 'interpolate':
+                    frame[col] = frame[col].interpolate()
+                    logging.info(f"Interpolated nulls in column '{col}'.")
+
+            # Apply drop_all last if specified
+            if 'drop_all' in handle_method:
+                frame.dropna(inplace=True)
+                logging.info("Dropped all rows with null values.")
+                
+            # Log null values to the user
+            logging.info(f"Null Check: {frame.isnull().sum()}")
+
+            # Update and return the modified DataFrame
+            self.initial_frame = frame
+            logging.info("Successfully handled null values. Updated DataFrame set to self.initial_frame.")
+            return self.initial_frame
+
+        except Exception as e:
+            logging.error(f"Error handling null values: {e}")
+            return None
+            
     def move_label_end(self, label: str) -> bool:
         """
         Moves the specified label/target column in self.initial_frame to the end.
@@ -127,7 +203,7 @@ class DatasetCreator:
         """
         
         # check if label exists within the dataframe
-        if not label in list(self.initial_frame.columns):
+        if label not in list(self.initial_frame.columns):
             logging.error("Label does not exist in the current list of columns. Please review and retry.")
             return False
         
@@ -161,7 +237,6 @@ class DatasetCreator:
             logging.info("Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.")
             frame = self.initial_frame.copy()
             
-            # frame = frame.dropna(axis=0, how='any')
             frame.columns = frame.columns.str.strip() # remove whitespaces from column headers
             logging.info("Whitespaces from column headers have been removed.")
             
@@ -261,13 +336,13 @@ class DatasetCreator:
         """Print/Log information about the dataframe"""
 
         null_values_by_column = frame.isnull().sum()
-        
-        print(frame.info())
-        print(frame.shape)
-        print(null_values_by_column)
+        logging.info(frame.head(10))
+        logging.info(frame.info())
+        logging.info(frame.shape)
+        logging.info(null_values_by_column)
 
     @staticmethod
-    def date_to_datetime(frame: pd.DataFrame, column_name: str, errors: str, drop_original_column: bool, datetime_cols: list) -> pd.DataFrame:
+    def date_to_datetime(frame: pd.DataFrame, column_name: str, errors: str, drop_original_column: bool, datetime_cols: list, is_weekend: bool) -> pd.DataFrame:
         """
         Converts the date column of a pandas DataFrame into a datetime format and adds additional columns such as year, month, and day.
 
@@ -277,6 +352,7 @@ class DatasetCreator:
             - errors (str): How errors should be handled: 'ignore', 'raise', or 'coerce'.
             - drop_original_column (bool): Whether to drop the original date column from the DataFrame.
             - datetime_cols (list): List of datetime attributes to add. Options: 'year', 'month', 'day', 'weekday'.
+            - is_weekend (bool): Whether to add a column in the DataFrame to check if weekday is a weekend. 1 = True.
 
         Returns:
             pd.DataFrame: The modified DataFrame with new datetime columns added, or None if an error occurs.
@@ -309,13 +385,6 @@ class DatasetCreator:
             frame[column_name] = pd.to_datetime(frame[column_name], errors=errors.lower())
             logging.info(f"Date column '{column_name}' successfully converted to datetime format.")
 
-            # Drop the original date column if requested
-            if drop_original_column:
-                frame.drop(columns=[column_name], inplace=True)
-                logging.info("Original date column has been dropped from the DataFrame.")
-            else:
-                logging.info("Original date column has been retained in the DataFrame.")
-
             # Add the requested datetime attributes as new columns
             for col in datetime_cols:
                 if col == 'year':
@@ -328,6 +397,18 @@ class DatasetCreator:
                     frame['weekday'] = frame[column_name].dt.dayofweek  # Monday = 0, Sunday = 6
 
                 logging.info(f"Datetime attribute '{col}' has been added to the DataFrame.")
+            
+            # if is_weekend is True, add a new column "is_weekend" to state if the day is a weekend. 1 = True, 0 = False    
+            if is_weekend:
+                frame['is_weekend'] = frame['weekday'].apply(lambda x: 1 if x > 4 else 0)
+                logging.info("is_weekend column has been added to the DatFrame")
+                
+            # Drop the original date column if requested
+            if drop_original_column:
+                frame.drop(columns=[column_name], inplace=True)
+                logging.info("Original date column has been dropped from the DataFrame.")
+            else:
+                logging.info("Original date column has been retained in the DataFrame.")
 
             logging.info(f"Final DataFrame columns after datetime processing: {frame.columns.tolist()}")
             return frame
@@ -391,7 +472,7 @@ class DatasetCreator:
             # Check if ascend is true. If it is, reverse the frame
             if ascend:
                 frame = frame[::-1]
-                logging.info(f"Frame successfully reversed.")
+                logging.info("Frame successfully reversed.")
             
             # Calculate the percent change for each column
             for col in num_columns:
@@ -399,7 +480,7 @@ class DatasetCreator:
                 frame[percent_col_name] = frame[col].pct_change()
                 logging.info(f"Percent change column calculated and added for column {col}")
             
-            # If ascen is true, reverse the frame back to the original order
+            # If ascend is true, reverse the frame back to the original order
             if ascend:
                 frame = frame[::-1]
                 logging.info("Frame successfully unreversed.")
@@ -525,7 +606,7 @@ class RegModelTester:
             # Standardize the Data
             scaler = StandardScaler()
             self.X_train_full = scaler.fit_transform(self.X_train_full)
-            self.y_train_full = scaler.fit_transform(self.y_train_full)
+            self.X_test = scaler.fit_transform(self.X_test)
             
             logging.info("X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.")
             logging.info(f"First Split Test Size: {model_test_size}")
@@ -536,7 +617,7 @@ class RegModelTester:
             
             logging.info("X_train_full and y_train_full have been split again to create training and testing data to train and tune our model. These new variables (X_train, X_val, y_train, y_val) should only be used to find which model works best on our dataset, and then subsequently tuning this model.")
             logging.info(f"Size X_train: {self.X_train.shape} | Size X_val: {self.X_val.shape}")
-            logging.info(f"Size of y_train: {self.y_train.shape} | Size y_val: {self.y_test.shape}")
+            logging.info(f"Size of y_train: {self.y_train.shape} | Size y_val: {self.y_val.shape}")
             
             logging.info("Testing and Training data have successfully been created. Ready now to get the best model.")
             return True
@@ -559,20 +640,34 @@ class RegModelTester:
         
         logging.info("get_best_models function has been called.")
 
-        # dict of linear models
+
+    # Dict of linear models
         linear_models = {
             'linear_regression': LinearRegression(),
-            'ridge_regression': Ridge(alpha=1.0, max_iter=10000),
-            'lasso_regression': Lasso(alpha=1.0, max_iter=10000),
-            'linear_support_vector': LinearSVR(max_iter=10000),
+            'ridge_regression': Ridge(alpha=0.01, max_iter=10000),
+            'lasso_regression': Lasso(alpha=0.01, max_iter=10000),
+            'elastic_net': ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=10000),
+            'huber_regression': HuberRegressor(max_iter=10000),
+            'linear_support_vector': LinearSVR(max_iter=10000)
         }
 
-        # dict of non-linear models
+        # Dict of non-linear models
         non_linear_models = {
             'gaussian_regressor': GaussianProcessRegressor(),
             'gradient_boosting': GradientBoostingRegressor(),
             'hist_boosting': HistGradientBoostingRegressor(),
             'random_forest': RandomForestRegressor(),
+            'extra_trees': ExtraTreesRegressor(),
+            'decision_tree': DecisionTreeRegressor(),
+            'k_nearest_neighbors': KNeighborsRegressor(),
+            'support_vector_regressor': SVR(),
+            'adaboost': AdaBoostRegressor(n_estimators=100),
+            'bagging_regressor': BaggingRegressor(n_estimators=100),
+            'stacking_regressor': StackingRegressor(estimators=[
+                ('rf', RandomForestRegressor()), 
+                ('gb', GradientBoostingRegressor())
+            ]),
+            'neural_network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=10000),
         }
 
         # combine both dictionaries
@@ -590,7 +685,8 @@ class RegModelTester:
             
             logging.info("Testing each model in the all_models dict now.")
             
-            logging.info(f"User passed in {n_iterations} number of iterations. We will run the model testing this amount of times.")
+            logging.info(f"User passed in {n_iterations} number of iterations. We will run the model testing {n_iterations+1} amount of times.")
+            
             for idx, model_run in enumerate(range(n_iterations + 1), start=1):
                 
                 logging.info(f"Model Run: {idx}")
@@ -729,117 +825,103 @@ class RegModelTester:
         except Exception as e:
             logging.error(f"Error in optimizing Gradient Boosting model: {e}")
         
-    def optimize_hist_boosting_model(self, optimize_method: str, n_iterations: int):
+    def optimize_hist_boosting_model(self, optimize_method: str, n_iterations: int, scoring: str = 'r2'):
         """
-        Optimize parameters for a HistBoosting model. All possible variables for each parameter is tested.
-        
-        This function should only be used if the current_model is HistGradientBoostingRegressor
+        Optimize parameters for a HistBoosting model. 
         
         Args:
-            - optimize_method (str): Can be 'grid' or 'random'. The selection determines whether the function uses GridSearchCV or RandomSearchCV.
-            - n_iterations (int): Number of times we want to our cross-validator to run.
+            - optimize_method (str): 'grid' or 'random' to select GridSearchCV or RandomSearchCV.
+            - n_iterations (int): Number of iterations for RandomSearchCV.
+            - scoring (str): Scoring metric for optimization. Default is 'r2'.
         """
-        
+    
         logging.info("Optimize HistBoosting Model function has been called.")
         
-        # check if current_model is HistGradientBoostingRegressor
+        # Validate model type
         if not isinstance(self.current_model, HistGradientBoostingRegressor):
-            logging.error(f"This optimization function is only available on the HistGradientBoostingRegressor model. The current model is {self.current_model}.")
+            logging.error("Optimization is only available for HistGradientBoostingRegressor models.")
             return None
         
-        # check optimize method is grid or random
+        # Validate optimization method
         optimize_method = optimize_method.lower()
-        if not optimize_method in ['grid', 'random']:
-            logging.error(f"Optimization Method is not valid. Received {optimize_method}. Expected 'grid' or 'random'.")
+        if optimize_method not in ['grid', 'random']:
+            logging.error(f"Invalid optimization method: {optimize_method}. Expected 'grid' or 'random'.")
             return None
-        
-        # get number of samples (rows) and features (columns) from our training frame
+
+        # Log dataset info
         n_samples, n_features = self.X_train.shape
-        logging.info(f"Number of Samples: {n_samples} | Number of Features: {n_features}")
+        logging.info(f"Samples: {n_samples}, Features: {n_features}")
         
-        # dynamically select the number of splits for RepeatedKFold
+        # Dynamic cross-validation split
         n_splits = 5 if n_samples > 5000 else 3
-        logging.info(f"Number of Splits for RepeatedKFold: {n_splits}")
+        logging.info(f"Number of splits for RepeatedKFold: {n_splits}")
         
-        # Instantiate the cross-validation strategy
+        # Cross-validation strategy
         repeater = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
-        
-        # Set the grid and random params
+
+        # Define hyperparameter search grids
         grid_params = {
-            "loss": ['squared_error', 'absolute_error', 'gamma', 'poisson', 'quantile'],
-            "quantile": [0.1, 0.5, 0.9],  # Only required if 'quantile' is a selected loss function
-            "max_iter": [50, 100, 150, 250, 500, 750, 1000] if n_samples < 5000 else [100, 250, 500, 750, 1000, 1500],
-            "max_depth": list(range(2, 10)) if n_samples < 5000 else list(range(5, 25, 2)),
-            "min_samples_leaf": list(range(5, 20)) if n_samples < 5000 else list(range(10, 30))
+            "max_iter": [50, 100, 150, 250, 500, 750, 1000],
+            "max_depth": list(range(2, 10)),
+            "min_samples_leaf": list(range(5, 20)),
+            "max_bins": [128, 255, 512]
         }
-        
+
         random_params = {
-            "loss": ['squared_error', 'absolute_error', 'gamma', 'poisson', 'quantile'],
-            "learning_rate": stats.uniform(0.01, 0.1),
-            "max_iter": stats.randint(20, 1000),
-            "max_leaf_nodes": stats.randint(10, 50),
-            "max_depth": stats.randint(5, 50),
-            "min_samples_leaf": stats.randint(5, 50)
-        }
-        
-        # perform cross-validation based on the optimization_method requested by the user
+        "learning_rate": stats.uniform(0.01, 0.1),
+        "max_iter": stats.randint(20, 1000),
+        "max_leaf_nodes": stats.randint(10, 50),
+        "max_depth": stats.randint(5, 50),
+        "min_samples_leaf": stats.randint(5, 50),
+        "max_bins": stats.randint(100, 512)
+    }
+
         try:
-            
-            # optimize_method = 'grid'
+            # Perform GridSearchCV or RandomizedSearchCV
             if optimize_method == 'grid':
-                
-                # instantiate GridSearchCV and pass in the arguments
-                gridcv = GridSearchCV(
+                searcher = GridSearchCV(
                     estimator=self.current_model,
                     param_grid=grid_params,
-                    scoring='r2',
+                    scoring=scoring,
                     n_jobs=-1,
                     refit=True,
                     cv=repeater
                 )
-                
-                # train the model 
-                gridcv.fit(X=self.X_train, y=self.y_train)
-                
-                # store the best params
-                self.best_params = gridcv.best_params_
-                self.best_score = gridcv.best_score_
-                
-                # log results
-                logging.info(f"Best Params for {self.current_model}: {self.best_params}")
-                logging.info(f"Best Score using best params: {self.best_score}")
-            
-            # optimize_method = 'random'
-            if optimize_method == 'random':
-                
-                # instantiate randomsearchcv
-                randcv = RandomizedSearchCV(
-                    estimator=self.current_model,
+            else:  # optimize_method == 'random'
+                searcher = RandomizedSearchCV(
+            estimator=self.current_model,
                     param_distributions=random_params,
                     n_iter=n_iterations,
-                    scoring='r2',
+                    scoring=scoring,
                     n_jobs=-1,
                     refit=True,
                     cv=repeater,
                     random_state=6712792
                 )
-                
-                # train the model
-                randcv.fit(X=self.X_train, y=self.y_train)
-                
-                # store the best scores and params
-                self.best_params = randcv.best_params_
-                self.best_score = randcv.best_score_
-                
-                # log the results
-                logging.info(f"Best Params for {self.current_model}: {self.best_params}")
-                logging.info(f"Best Score using best params: {self.best_score}")
-                
-            logging.info(f"Cross validation successfully performed.")
             
-        except Exception as e:
-            logging.error(f"Unable to perform cross-validation. Received error {e}")
+            # Train the model using the chosen optimization method
+            searcher.fit(self.X_train, self.y_train)
+            
+            # Store results
+            self.best_params = searcher.best_params_
+            self.best_score = searcher.best_score_
+            
+            logging.info(f"Best Params: {self.best_params}")
+            logging.info(f"Best Score: {self.best_score}")
+            logging.info("Cross-validation successfully completed.")
         
+        except Exception as e:
+            logging.error(f"Error during cross-validation: {e}")   
+    
+    #TODO: COMPLETE THE OPTIMIZATION FUNCTION FOR RANDOM FOREST REGRESSOR
+    def optimize_random_forest(self):
+        pass
+    
+    #TODO: COMPLETE THE OPTIMIZE EXTRA TREES REGRESSION FUNCTION
+    def optimize_extra_trees(self):
+        pass
+    
+               
     def final_evaluation(self):
         """
         Retrains the model with the full training dataset using the best hyperparameters found. Then, makes predictions on the test set.
