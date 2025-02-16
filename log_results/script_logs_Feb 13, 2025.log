@@ -1,0 +1,141 @@
+INFO - classes.py - 51 - Opening file /Users/aryanvafadar/Documents/GitHub/machine_learning_models/files/input_files/house_prices_data.csv to create into a pandas dataframe.
+INFO - classes.py - 57 - Initial DataFrame successfully created and set to self.initial_frame
+INFO - classes.py - 58 - Shape of Initial Frame: (21613, 21)
+INFO - classes.py - 59 - Initial Frame Columns: Index(['id', 'date', 'price', 'bedrooms', 'bathrooms', 'sqft_living',
+       'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade',
+       'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode',
+       'lat', 'long', 'sqft_living15', 'sqft_lot15'],
+      dtype='object')
+INFO - classes.py - 60 - Initial Frame DataTypes: {'id': dtype('int64'), 'date': dtype('O'), 'price': dtype('float64'), 'bedrooms': dtype('int64'), 'bathrooms': dtype('float64'), 'sqft_living': dtype('int64'), 'sqft_lot': dtype('int64'), 'floors': dtype('float64'), 'waterfront': dtype('int64'), 'view': dtype('int64'), 'condition': dtype('int64'), 'grade': dtype('int64'), 'sqft_above': dtype('int64'), 'sqft_basement': dtype('int64'), 'yr_built': dtype('int64'), 'yr_renovated': dtype('int64'), 'zipcode': dtype('int64'), 'lat': dtype('float64'), 'long': dtype('float64'), 'sqft_living15': dtype('int64'), 'sqft_lot15': dtype('int64')}
+INFO - classes.py - 61 - Intial Frame Contains Null Values?: id               False
+date             False
+price            False
+bedrooms         False
+bathrooms        False
+sqft_living      False
+sqft_lot         False
+floors           False
+waterfront       False
+view             False
+condition        False
+grade            False
+sqft_above       False
+sqft_basement    False
+yr_built         False
+yr_renovated     False
+zipcode          False
+lat              False
+long             False
+sqft_living15    False
+sqft_lot15       False
+dtype: bool
+INFO - classes.py - 62 - Total Number of Null Values in Each Column: id               0
+date             0
+price            0
+bedrooms         0
+bathrooms        0
+sqft_living      0
+sqft_lot         0
+floors           0
+waterfront       0
+view             0
+condition        0
+grade            0
+sqft_above       0
+sqft_basement    0
+yr_built         0
+yr_renovated     0
+zipcode          0
+lat              0
+long             0
+sqft_living15    0
+sqft_lot15       0
+dtype: int64
+INFO - classes.py - 212 - Label price exists in the dataframe. Attempting to remove...
+INFO - classes.py - 216 - Label column has been removed from the dataframe, and will be reinserted at the end.
+INFO - classes.py - 217 - Label Column: 0        221900.0
+1        538000.0
+2        180000.0
+3        604000.0
+4        510000.0
+           ...   
+21608    360000.0
+21609    400000.0
+21610    402101.0
+21611    400000.0
+21612    325000.0
+Name: price, Length: 21613, dtype: float64
+INFO - classes.py - 221 - Label column added back to the dataframe.
+INFO - classes.py - 222 - Sample of new self.initial_frame:                id             date  bedrooms  bathrooms  sqft_living  sqft_lot  floors  ...  yr_renovated  zipcode      lat     long  sqft_living15  sqft_lot15      price
+7433   9362000080  20150316T000000         5       3.50         4050     20925     2.0  ...          2005    98040  47.5348 -122.241           3880       18321  1600000.0
+12241  7682200320  20150409T000000         3       2.00         1610      7575     1.0  ...             0    98003  47.3340 -122.300           1920        8400   197400.0
+14124   254000175  20140819T000000         2       1.00         1050      4800     1.0  ...             0    98146  47.5128 -122.388           1230        4800   325000.0
+4944   1136100006  20150127T000000         2       1.50         1110    118047     1.0  ...             0    98072  47.7467 -122.128           2970       43500   625000.0
+4761   7550801206  20140904T000000         4       3.00         1540      4140     1.5  ...             0    98107  47.6728 -122.396           1460        5000   624000.0
+866    3955900830  20150427T000000         3       2.50         3460      6590     2.0  ...             0    98056  47.4802 -122.188           2490        6312   467000.0
+9321   9183701345  20141103T000000         2       1.75         1560      7575     1.0  ...             0    98030  47.3776 -122.228           2050        9000   290000.0
+10625  2619950400  20140714T000000         4       2.50         2200      6018     2.0  ...             0    98019  47.7338 -121.966           2480        5899   396800.0
+2491   8562900520  20140612T000000         5       3.50         3690     11928     2.0  ...             0    98074  47.6108 -122.060           2640       11928   640000.0
+5577   8857600780  20141003T000000         5       1.50         1710      8100     1.5  ...             0    98032  47.3839 -122.288           1480        8025   158550.0
+
+[10 rows x 21 columns]
+INFO - classes.py - 86 - remove_columns function called. List of columns to remove: ['date', 'id']
+INFO - classes.py - 90 - Current columns in the dataframe: ['id', 'date', 'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15', 'price']
+INFO - classes.py - 94 - Requested to remove columns have been set to lowercase.
+INFO - classes.py - 103 - All columns exist within the DataFrame, and will be removed.
+INFO - classes.py - 110 - Columns ['date', 'id'] have been removed from the dataframe.
+INFO - classes.py - 111 - Columns that remain in the frame: ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15', 'price'].
+INFO - classes.py - 238 - Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.
+INFO - classes.py - 242 - Whitespaces from column headers have been removed.
+INFO - classes.py - 246 - Whitespaces removed from rows/samples in the dataset.
+INFO - classes.py - 250 - Special characters, symbols and commas removed from the frame.
+INFO - classes.py - 252 - Self.initial_frame has been cleaned. New cleaned frame has been set to self.cleaned_frame
+INFO - classes.py - 272 - Frame encoding function has been called. All string data will be converted to numeric (int).
+INFO - classes.py - 277 - Self.cleaned_frame has been copied.
+INFO - classes.py - 281 - SkLearn OneHotEncoder has been instantiated.
+INFO - classes.py - 284 - Iterating through the dataframe to search for columns whose data is of type object.
+INFO - classes.py - 323 - Dataframe has finished being encoded. Label/Target column will now be removed and re-added to the end of the frame.
+INFO - classes.py - 326 - Label column price has been removed and readded to the end of the dataframe.
+INFO - classes.py - 590 - Get features and labels function has been called.
+INFO - classes.py - 599 - Columns in DataFrame: ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15', 'price']
+INFO - classes.py - 607 - List of Features: ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'grade', 'sqft_above', 'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long', 'sqft_living15', 'sqft_lot15']. These columns will be used to create our X variable.
+INFO - classes.py - 608 - List of Labels: price. This will be used for our y variable.
+INFO - classes.py - 612 - X DataFrame created, and will be used for train_test_split. X Frame Shape: (21613, 18)
+INFO - classes.py - 613 - y DataFrame created, and will be used for train_test_split. y Frame Shape: (21613,)
+INFO - classes.py - 623 - X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.
+INFO - classes.py - 624 - First Split Test Size: 0.22
+INFO - classes.py - 625 - Size X_train_full: (16858, 18) | Size X_test: (4755, 18)
+INFO - classes.py - 626 - Size of y_train_full: (16858,) | Size y_test: (4755,)
+INFO - classes.py - 630 - X_train_full and y_train_full have been split again to create training and testing data to train and tune our model. These new variables (X_train, X_val, y_train, y_val) should only be used to find which model works best on our dataset, and then subsequently tuning this model.
+INFO - classes.py - 631 - Size X_train: (13486, 18) | Size X_val: (3372, 18)
+INFO - classes.py - 632 - Size of y_train: (13486,) | Size y_val: (3372,)
+INFO - classes.py - 634 - Testing and Training data have successfully been created. Ready now to get the best model.
+INFO - classes.py - 648 - Features Variance: [0.94111392 0.99977142 1.00177518 0.88120547 1.00095718 1.08271797
+ 1.00876783 0.99409023 0.9980947  1.00521134 0.99628856 0.99658527
+ 1.03200933 0.99762453 1.00119683 0.99214043 0.99881841 0.95796776]
+INFO - classes.py - 690 - Selected Features from VarianceThreshold: Index(['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors',
+       'waterfront', 'view', 'condition', 'grade', 'sqft_above',
+       'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 'lat', 'long',
+       'sqft_living15', 'sqft_lot15'],
+      dtype='object')
+INFO - classes.py - 697 - No features need to be removed from dataset.
+INFO - classes.py - 705 - SelectKBest Best Scores: [1.47717206e+03 5.20139446e+03 1.28879526e+04 1.58615158e+02
+ 9.59778556e+02 9.23477148e+02 2.61505793e+03 1.24066735e+01
+ 1.10674092e+04 7.72876646e+03 1.56955051e+03 5.07023951e+01
+ 2.15768638e+02 4.52698078e+01 1.40900613e+03 8.94147603e+00
+ 6.99320747e+03 1.15615547e+02]
+INFO - classes.py - 706 - SelectKBest p_values: [9.10486555e-307 0.00000000e+000 0.00000000e+000 3.62880689e-036
+ 1.24508521e-203 2.95949774e-196 0.00000000e+000 4.29216733e-004
+ 0.00000000e+000 0.00000000e+000 0.00000000e+000 1.12932037e-012
+ 1.79370289e-048 1.78605038e-011 2.18571688e-293 2.79270646e-003
+ 0.00000000e+000 7.41349259e-027]
+INFO - classes.py - 717 - Feature: bedrooms | KbestScore: 1477.1720623460544 | P_Value: 9.104865554468554e-307
+INFO - classes.py - 717 - Feature: bathrooms | KbestScore: 5201.394464719083 | P_Value: 0.0
+INFO - classes.py - 717 - Feature: sqft_living | KbestScore: 12887.952638152252 | P_Value: 0.0
+INFO - classes.py - 717 - Feature: floors | KbestScore: 158.61515806022626 | P_Value: 3.628806885947935e-36
+INFO - classes.py - 717 - Feature: view | KbestScore: 959.7785562623243 | P_Value: 1.2450852097262654e-203
+INFO - classes.py - 717 - Feature: grade | KbestScore: 923.4771484759891 | P_Value: 2.959497736776517e-196
+INFO - classes.py - 717 - Feature: sqft_above | KbestScore: 2615.0579333333903 | P_Value: 0.0
+INFO - classes.py - 717 - Feature: sqft_basement | KbestScore: 12.406673461323487 | P_Value: 0.00042921673252838865
+INFO - classes.py - 717 - Feature: lat | KbestScore: 11067.409161311516 | P_Value: 0.0
+INFO - classes.py - 717 - Feature: sqft_living15 | KbestScore: 7728.766458437865 | P_Value: 0.0

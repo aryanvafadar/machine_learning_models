@@ -10,16 +10,20 @@ from config import output_files_folder, get_prediction_csv, get_ml_file
 from sklearn.base import clone
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression, f_classif
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, RepeatedKFold
 
-# import linear models
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, HuberRegressor
-from sklearn.svm import LinearSVR, SVR
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor, ExtraTreesRegressor, BaggingRegressor, AdaBoostRegressor
-from sklearn.neural_network import MLPRegressor
+# import linear and non linear models for classification and regression tasks
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, HuberRegressor, LogisticRegression, RidgeClassifier, SGDClassifier
+from sklearn.svm import LinearSVR, LinearSVC, SVC
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+from sklearn.gaussian_process import GaussianProcessRegressor, GaussianProcessClassifier
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor, ExtraTreesRegressor, BaggingRegressor, AdaBoostRegressor, RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier
+from sklearn.neural_network import MLPRegressor, MLPClassifier
+
+
 
 
 """ DataFrame Creator Class"""
@@ -44,7 +48,7 @@ class DatasetCreator:
         
         self.removed_columns = None
 
-    def create_frame(self):
+    def create_frame(self) -> pd.DataFrame:
         try:
             """Create the initial dataframe with the csv_file, and return an initial frame"""
             logging.info(f"Opening file {self.csv_file} to create into a pandas dataframe.")
@@ -484,6 +488,9 @@ class DatasetCreator:
             if ascend:
                 frame = frame[::-1]
                 logging.info("Frame successfully unreversed.")
+                
+            # drop NaN Values
+            frame.dropna(inplace=True)
             
             # if multiply_by_100 is true, multiply the new colums by 100
             if multiply_by_100:
@@ -543,10 +550,16 @@ class RegModelTester:
         self.X_val = None # Use to find the best model and validate (tune hyperparams)
         self.y_train = None # Use to train the best model and to-be tuned model
         self.y_val = None # Use to find the best model and validate (tune hyperparams)
+        
+        # get frature variances, best and worst features
+        self.features_variances = []
+        self.best_features = []
+        self.worst_features = []
 
         # metric scores from model tester
         self.current_model_name = None
         self.current_model = None
+        self.current_model_params = None
         self.r2 = 0
         self.mae = 0
         self.mse = 0
@@ -564,6 +577,8 @@ class RegModelTester:
     def get_features_labels(self, model_test_size) -> bool:
         """
         Extract features and labels, then split the data into training, validation, and testing sets.
+        
+        Standardization is also applied to the training and testing features (self.X_train_full and self.X_train).
 
         Args:
             model_test_size (float): The proportion of the dataset to reserve for testing. Eg: 0.30, 0.40, 0.55
@@ -606,7 +621,7 @@ class RegModelTester:
             # Standardize the Data
             scaler = StandardScaler()
             self.X_train_full = scaler.fit_transform(self.X_train_full)
-            self.X_test = scaler.fit_transform(self.X_test)
+            self.X_test = scaler.transform(self.X_test)
             
             logging.info("X and y variables have been split into training and testing data. This first split should not be used to train and tune the machine learing model. It should only be used for training and testing after the model has been trained and tuned.")
             logging.info(f"First Split Test Size: {model_test_size}")
@@ -625,7 +640,88 @@ class RegModelTester:
         except Exception as e:
             print(f"Error in get_features_labels: {e}")
             return False
+    
+    def get_variances(self) -> pd.DataFrame:
+        """
+        Returns the variance of the features in a DataFrame. Can be used prior to using the features_analysis function in RegModelTester() class.
+        """
+        try:
+            variances = self.X_train.var(axis=0)
+            self.features_variances = variances
+            logging.info(f"Features Variance: {self.features_variances}")
+                
+        except Exception as e:
+            logging.error(f"Unable to get the variances of the data. Received error {e}")
+            return None
+    
+    def feature_analysis(self, label: str, use_VarianceThreshold: bool = True, variance_threshold: int = 0.01, use_SelectKBest: bool = True, num_top_features: int = 10):
+        
+        """
+        Get the least and most important features of any DataSet, with the goal of completing regression tasks. An explanation of each feature analysis method is provided below.
+        
+        VarianceThreshold
+            - VarianceThreshold is an unsupervised feature selector that removes features whose variance is below a specified threshold. 
+            - For each feature within the Dataset, it calculates the variance. Any variance below 0.1 is considered to have too low variability within the samples, and is therefore removed. 
+            - Features with low variance generally do not provide any value to our machine learning model, and do not help us in making a prediction. By removing them, it simplifies our model and can help improve performance.
             
+        SelectKBest + f_regression
+            - SelectKBest is a supervised feature selection method that picks the top k features based on a scoring function. 
+            - The scoring function, f_regression, computes the f-statistic for each for each feature by assessing its linear relationship with the target variable y. A higher f-statistic means the feature is more likely to be significantly correlated with the target variable (in a linear sense).
+            - The top X features are selected, based on user request. 
+            
+        Interpreting F_Scores & P_Values from SelectKBest
+            - The higher the f_score, the the higher the chances that a relationship exists between the feature and the target.
+            - Extremely low p_values indicate that the relationship between the feature and label is highly statistically significant. It is almost impossible that the observed relationship is due to random chance. An extremely low p_value is considered to be 0.05 or 0.01
+            
+        We recommend using this two step approach of:
+            1) First filtering out the features that don't vary enough to be informative.
+            2) Selecting the features that are the most important for the Dataset.
+        
+        """
+        
+        try:
+            # if use_VarianceThreshold is true
+            if use_VarianceThreshold:
+                feature_names = self.frame.drop(columns=[label]).columns
+                
+                selector = VarianceThreshold(threshold=variance_threshold) # instantiate VarianceThreshold object()
+                selector.fit(X=self.X_train) # finds the features who are below the threshold
+                mask = selector.get_support() # Gets the boolean mask
+                selected_features = feature_names[mask]
+                logging.info(f"Selected Features from VarianceThreshold: {selected_features}")
+                
+                # outline which features have been removed
+                removed_features = set(self.frame.columns) - set(selected_features)
+                if removed_features:
+                    logging.info(f"Suggested Features to Remove: {removed_features}")
+                else:
+                    logging.info("No features need to be removed from dataset.")
+                
+            # if use_SelectKBest is true:
+            if use_SelectKBest:
+                kbest = SelectKBest(score_func=f_regression, k=num_top_features)
+                X_kbest = kbest.fit(X=self.X_train, y=self.y_train)
+                
+                # log the best scores
+                logging.info(f"SelectKBest Best Scores: {kbest.scores_}")
+                logging.info(f"SelectKBest p_values: {kbest.pvalues_}")
+                
+                # get the feature names
+                feature_names = self.frame.drop(columns=[label]).columns
+                mask = kbest.get_support()
+                best_features = list(feature_names[mask])
+                
+                # log feature and score
+                best_scores = list(kbest.scores_)
+                best_p_values = list(kbest.pvalues_)
+                for feature, score, p_value in zip(best_features, best_scores, best_p_values):
+                    logging.info(f"Feature: {feature} | KbestScore: {score} | P_Value: {p_value}")
+                
+        
+        except Exception as e:
+            logging.error(f"Unable to perform feature analysis. Received error {e}")
+            return None
+    
     def get_best_models(self, n_iterations: int) -> dict:   
         
         """
@@ -647,7 +743,7 @@ class RegModelTester:
             'ridge_regression': Ridge(alpha=0.01, max_iter=10000),
             'lasso_regression': Lasso(alpha=0.01, max_iter=10000),
             'elastic_net': ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=10000),
-            'huber_regression': HuberRegressor(max_iter=10000),
+            #'huber_regression': HuberRegressor(max_iter=10000),
             'linear_support_vector': LinearSVR(max_iter=10000)
         }
 
@@ -661,13 +757,13 @@ class RegModelTester:
             'decision_tree': DecisionTreeRegressor(),
             'k_nearest_neighbors': KNeighborsRegressor(),
             'support_vector_regressor': SVR(),
-            'adaboost': AdaBoostRegressor(n_estimators=100),
-            'bagging_regressor': BaggingRegressor(n_estimators=100),
-            'stacking_regressor': StackingRegressor(estimators=[
-                ('rf', RandomForestRegressor()), 
-                ('gb', GradientBoostingRegressor())
-            ]),
-            'neural_network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=10000),
+            # 'adaboost': AdaBoostRegressor(n_estimators=100),
+            # 'bagging_regressor': BaggingRegressor(n_estimators=100),
+            # 'stacking_regressor': StackingRegressor(estimators=[
+            #     ('rf', RandomForestRegressor()), 
+            #     ('gb', GradientBoostingRegressor())
+            # ]),
+            # 'neural_network': MLPRegressor(hidden_layer_sizes=(100,), max_iter=10000),
         }
 
         # combine both dictionaries
@@ -721,6 +817,7 @@ class RegModelTester:
                         if r2 > self.r2:
                             self.current_model_name = name
                             self.current_model = model
+                            self.current_model_params = model.get_params()
                             self.r2 = r2
                             self.mae = mae
                             self.mse = mse
@@ -889,7 +986,7 @@ class RegModelTester:
                 )
             else:  # optimize_method == 'random'
                 searcher = RandomizedSearchCV(
-            estimator=self.current_model,
+                    estimator=self.current_model,
                     param_distributions=random_params,
                     n_iter=n_iterations,
                     scoring=scoring,
@@ -913,23 +1010,190 @@ class RegModelTester:
         except Exception as e:
             logging.error(f"Error during cross-validation: {e}")   
     
-    #TODO: COMPLETE THE OPTIMIZATION FUNCTION FOR RANDOM FOREST REGRESSOR
-    def optimize_random_forest(self):
-        pass
+    def optimize_random_forest(self, optimization_method: str, n_iterations: int, scoring: str = 'r2'):
+        """
+        Optimizes the RandomForestRegressor model by allowing the user to select between GridSearchCV and RandomSearchCV.
+
+        Args:
+            - optimization_method (str): Optimization method: 'grid' for GridSearchCV or 'random' for RandomizedSearchCV.
+            - n_iterations (int): Number of iterations for RandomSearchCV.
+            - scoring (str): Default is 'r2'. Other options: 'neg_mean_absolute_error', 'neg_mean_squared_error', etc.
+
+        Returns:
+            - If successful, sets self.best_score and self.best_params.
+            - If unsuccessful, returns None.
+        """
+        
+        logging.info("Random Forest Optimization function called.")
+
+        # Validate model type
+        if not isinstance(self.current_model, RandomForestRegressor):
+            logging.error(f"Expected RandomForestRegressor, but got {type(self.current_model).__name__}.")
+            return None
+
+        # Validate optimization method
+        optimization_method = optimization_method.lower()
+        if optimization_method not in ['grid', 'random']:
+            logging.error(f"Invalid optimization method: {optimization_method}. Expected 'grid' or 'random'.")
+            return None
+
+        # Extract dataset shape
+        n_samples, n_features = self.X_train.shape
+        logging.info(f"Dataset: {n_samples} samples, {n_features} features.")
+
+        # Determine the number of splits dynamically
+        n_splits = 5 if n_samples > 5000 else 3
+
+        # Instantiate the RepeatedKFold strategy
+        repeater = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
+
+        # Define shared parameters for both GridSearch and RandomizedSearch
+        base_params = {
+            "n_estimators": [100, 200, 300, 400, 500, 750, 1000] if n_samples > 5000 else [50, 100, 150, 200, 250, 300, 350, 400, 450, 500],
+            "max_depth": list(range(2, 20)) if n_samples > 5000 else list(range(2, 50, 2)),
+            "min_samples_split": list(range(2, 24)) if n_samples > 5000 else list(range(5, 250, 5)),
+        }
+
+        # Define randomized search parameters
+        random_params = {
+            "n_estimators": stats.randint(50, 1000),
+            "max_depth": stats.randint(2, 100),
+            "min_samples_split": stats.randint(5, 5000) if n_samples > 5000 else stats.randint(5, 100),
+            "min_impurity_decrease": stats.uniform(0.001, 0.1)  # Reduced lower bound for better control
+        }
+
+        try:
+            if optimization_method == 'grid':
+                # Grid Search
+                gridcv = GridSearchCV(
+                    estimator=self.current_model,
+                    param_grid=base_params,
+                    scoring=scoring,
+                    n_jobs=-1,
+                    refit=True,
+                    cv=repeater
+                )
+                gridcv.fit(self.X_train, self.y_train)
+
+                # Store results
+                self.best_params = gridcv.best_params_
+                self.best_score = gridcv.best_score_
+
+            else:
+                # Random Search
+                randcv = RandomizedSearchCV(
+                    estimator=self.current_model,
+                    param_distributions=random_params,
+                    n_iter=n_iterations,
+                    scoring=scoring,
+                    n_jobs=-1,
+                    refit=True,
+                    cv=repeater,
+                    random_state=6712792
+                )
+                randcv.fit(self.X_train, self.y_train)
+
+                # Store results
+                self.best_params = randcv.best_params_
+                self.best_score = randcv.best_score_
+
+            # Log results
+            logging.info(f"Best Parameters: {self.best_params}")
+            logging.info(f"Best Score: {self.best_score}")
+            logging.info("Optimization successfully completed.")
+
+        except Exception as e:
+            logging.error(f"Optimization failed: {e}")
+            return None 
     
-    #TODO: COMPLETE THE OPTIMIZE EXTRA TREES REGRESSION FUNCTION
-    def optimize_extra_trees(self):
-        pass
-    
-               
+    def optimize_extra_trees(self, optimization_method: str, n_iterations: int = 10, scoring: str = 'r2'):
+        """
+        Optimizes the ExtraTreesRegressor model using GridSearchCV or RandomizedSearchCV.
+
+        Args:
+            optimization_method (str): 'grid' for GridSearchCV, 'random' for RandomizedSearchCV.
+            n_iterations (int): Number of iterations for RandomizedSearchCV (ignored for GridSearchCV).
+            scoring (str): Default 'r2'. Other options: 'neg_mean_absolute_error', 'neg_mean_squared_error', etc.
+
+        Returns:
+            - The search object if optimization is successful (also sets self.best_score and self.best_params).
+            - None if unsuccessful.
+        """
+        logging.info("Optimizing ExtraTreesRegressor...")
+
+        # Validate model type
+        if not isinstance(self.current_model, ExtraTreesRegressor):
+            logging.error(f"Expected ExtraTreesRegressor, but found {type(self.current_model).__name__}.")
+            return None
+
+        # Validate optimization method
+        optimization_method = optimization_method.lower()
+        if optimization_method not in ['grid', 'random']:
+            logging.error(f"Invalid method: {optimization_method}. Expected 'grid' or 'random'.")
+            return None
+
+        if optimization_method == 'grid' and n_iterations is not None:
+            logging.warning("n_iterations is ignored for GridSearchCV.")
+
+        n_samples = self.X_train.shape[0]
+        n_splits = 5 if n_samples > 5000 else 3
+        repeater = RepeatedKFold(n_splits=n_splits, n_repeats=2, random_state=6712792)
+
+        # Define parameter grids
+        grid_params = {
+            "n_estimators": [500, 750, 1000, 1250, 1500, 2000] if n_samples > 5000 else [100, 200, 300, 400, 500, 750],
+            "max_depth": list(range(5, 25, 5)) if n_samples > 5000 else list(range(2, 15, 2)),
+            "max_features": ['auto', 'sqrt', 'log2'] if n_samples > 5000 else ['sqrt', 'log2'],
+            "min_samples_split": list(range(5, 50, 5)) if n_samples > 5000 else list(range(2, 20, 2)),
+        }
+
+        random_params = {
+            "n_estimators": stats.randint(500, 2000) if n_samples > 5000 else stats.randint(100, 1000),
+            "max_depth": stats.randint(5, 50) if n_samples > 5000 else stats.randint(2, 25),
+            "max_features": stats.uniform(0.3, 0.7) if n_samples > 5000 else stats.uniform(0.5, 1.0),
+            "min_samples_split": stats.randint(5, 100) if n_samples > 5000 else stats.randint(2, 50),
+        }
+
+        try:
+            # Choose search method dynamically
+            search_cv = GridSearchCV if optimization_method == 'grid' else RandomizedSearchCV
+
+            # Build keyword arguments conditionally
+            kwargs = {
+                "estimator": self.current_model,
+                "scoring": scoring,
+                "n_jobs": -1,
+                "refit": True,
+                "cv": repeater,
+            }
+
+            if optimization_method == 'grid':
+                kwargs["param_grid"] = grid_params
+            else:
+                kwargs["param_distributions"] = random_params
+                kwargs["n_iter"] = n_iterations
+
+            search = search_cv(**kwargs)
+            search.fit(self.X_train, self.y_train)
+
+            # Store results
+            self.best_params = search.best_params_
+            self.best_score = search.best_score_
+
+            logging.info(f"Best Parameters: {self.best_params}")
+            logging.info(f"Best Score: {self.best_score}")
+            logging.info("Optimization completed successfully.")
+
+            return search
+
+        except Exception as e:
+            logging.error(f"Optimization failed: {e}")
+            return None
+ 
     def final_evaluation(self):
         """
         Retrains the model with the full training dataset using the best hyperparameters found. Then, makes predictions on the test set.
         """
-        
-        if not self.current_model:
-            print("No machine learning model found. Make sure to run get_best_models to retrieve the best model for the dataset.")
-            return None
         
         if not self.best_params:
             print("No parameters found in self.best_params. Make sure to run an optimization function to get the best parameters. ")
@@ -1079,7 +1343,314 @@ class RegLabelPredictor:
         
 """Classification Model Tester Class"""
 class ClfModelTester:
-    pass      
+    
+    def __init__(self, frame):
+        self.frame = frame
+        
+        # features and labels frame
+        self.features_frame = None
+        self.label_frame = None
+        self.label_name = None
+        
+        # features and labels from the first split, only used to test our final tuned model
+        self.X_train_full = None
+        self.y_train_full = None
+        self.X_test = None
+        self.y_test = None
+        
+        # features and labels from our second split, only used to finding the best model and tuning it
+        self.X_train = None
+        self.y_train = None
+        self.X_validator = None
+        self.y_validator = None
+        
+        # feature variance & best features
+        self.features_variance = None
+        self.worst_features = None
+        self.best_features = None
+        self.selected_features_mask = None
+        
+        # reduced training and testing sets using the top features selected by SelectKBest
+        self.X_train_full_reduced = None
+        self.X_test_reduced = None
+        self.X_train_reduced = None
+        self.X_validator_reduced = None
+        
+        # bool if user uses reduced_features to find the best model
+        self.use_reduced_features = False
+        
+        # model information from get_best_models()
+        self.current_model = None
+        self.current_model_name = None
+        
+    def get_features_labels(self, model_test_size: float, label: str) -> np.array:
+        """
+        Takes a pandas DataFrame and splits the data into two sets of training and testing data.  The first split is used to test the final tuned model, and the second split is only used to find the best model and tune it. The functions sets the results to the various self.train and self.test class attributes.
+        
+        Various checks are implemented priro to the function executing. 
+            - Check self.frame is not empty
+            - Check model_test_size is an appropriate size
+            - Check len of column names
+        
+        Args:
+            - model_test_size (float): What portion of the data to use for testing. The remainder will be used for training.
+            
+        Returns:
+            - If successful, sets various numpy arrays and sets them to self.train and self.test class attributes.
+            - If unsuccessful, returns None.
+        """
+        # check to make sure self.frame exists
+        if self.frame.empty:
+            logging.error("DataFrame is empty. Cannot split into features and labels.")
+            return None
+        logging.info(f"Shape of DataFrame: {self.frame.shape}")
+        
+        # check size of model_test_size
+        if model_test_size > 0.40:
+            logging.warning(f"Model test size is high ({model_test_size}). Recommend a value between 0.15 and 0.40")
+        
+        # check num of columns in the frame
+        num_columns = len(self.frame.columns)
+        if num_columns < 2:
+            logging.error(f"DataFrame only has {num_columns} columns, which is not enough to split the data.")
+            return None
+        logging.info(f"Number of Columns in DataFrame: {num_columns}")
+            
+        try:  
+            # split the dataframe into features and labels
+            frame = self.frame.copy()
+            self.label_name = label
+            columns_list = list(frame.columns)
+            features_list = [col for col in columns_list if col != self.label_name]
+            
+            logging.info(f"List of Columns: {columns_list}")
+            logging.info(f"List of Features: {features_list}")
+            logging.info(f"Label Name: {self.label_name}")
+            
+            self.features_frame = frame[features_list]
+            self.label_frame = frame[label]
+            logging.info(f"Shape of Features Frame: {self.features_frame.shape} | Shape of Label Frame: {self.label_frame.shape}")
+            
+            # get features and labels for split 1
+            self.X_train_full, self.X_test, self.y_train_full, self.y_test = train_test_split(self.features_frame, self.label_frame, test_size=model_test_size, random_state=6712792)
+            logging.info("Split Number 1 Completed")
+            logging.info(f"Shape of X_train_full: {self.X_train_full.shape} | Shape of y_train_full: {self.y_train_full.shape}")
+            logging.info(f"Shape of X_test: {self.X_test.shape} | Shape of y_test: {self.y_test.shape}")
+            
+            # standardize the training data, not the testing data
+            standardizer = StandardScaler()
+            logging.info("Standardizer object instantiated for StandardScaler()")
+            
+            self.X_train_full = standardizer.fit_transform(self.X_train_full)
+            logging.info("self.X_train_full has been standardized")
+            
+            self.X_test = standardizer.transform(self.X_test)
+            logging.info("self.X_test has been standardized")
+            
+            # split again
+            self.X_train, self.X_validator, self.y_train, self.y_validator = train_test_split(self.X_train_full, self.y_train_full, test_size=model_test_size, random_state=6712792)
+            logging.info("Split Number 2 Completed")
+            logging.info(f"Shape of X_train: {self.X_train.shape} | Shape of y_train: {self.y_train.shape}")
+            logging.info(f"Shape of X_validator: {self.X_validator.shape} | Shape of y_validator: {self.y_validator.shape}")
+            
+            logging.info("Features and labels retrieved. Training and testing data created.")
+            
+            
+        except Exception as e:
+            logging.error(f"Unable to get features and labels. Received error {e}")
+            return None
+    
+    def get_feature_variance(self) -> bool:
+        """
+        Gets the variance of self.X_train_full (features) for the users review. Low variances may not necessarily be useful for the machine learning model as it makes it difficult to find relationships within the data. High variances can lead to better model performance.
+        """
+        
+        # check self.X_train_full is not empty
+        if self.X_train_full is None:
+            logging.error("Self.X_train_full is empty. Use get_features_labels() function first to get training and testing data.")
+            return None
+        
+        try:
+            variance = self.X_train_full.var(axis=0)
+            self.features_variance = variance
+            logging.info(f"Features Variance: {self.features_variance}")
+            return True
+            
+        except Exception as e:
+            logging.info(f"Unable to get the variances of self.X_train_full. Received error {e}")
+            return None
+        
+    def features_analysis(self, threshold: float = 0.1, num_top_features: int = 10, use_variance_threshold: bool = True, use_selectkbest: bool = True) -> bool:
+        """
+        Analyzes the features of the Dataset to search for the best and worst features, prior to finding the best model for the dataset and tuning the best model. The function uses two methods, VarianceThreshold and SelectKBest, to analyze the features. VarianceThreshold finds features whose variances are too low and therefore do not provide much value to the model. SelectKBest selects the top k number of features that are the best. A more detailed explanation is provided below.
+        
+        VarianceThreshold
+            - An unsupervised technique used to find features who are below a specified variance level. Used in both classification and regression tasks.
+            - Features below the specified variance level are removed, as they do not provide much value to the model in determining relationships, and this helps simplify the model.
+            
+        SelectKBest + f_classif
+            - SelectKBest selects the best features based on a scoring method that evaluates the relationship between the feature and the label.
+            - f_classif performs an ANOVA f-test comparing the variance between groups (classes) to the variance within groups. The f-statistic and p-values are calculated.
+            - A higher f-statistic score signifies that the features' values are very different on average across the different classes, while being relatively consistent within each class. Higher f-statistic scores mean the feature is important for our model.
+            - Lower p-scores are desirable. This means that the differences across the averages of the classes are statistically significant. This provides evidence that the feature actually differentiates between the classes.
+            
+        A two step approach is useful in determine the best features for our dataset:
+            1) Weed out the worst features by using VarianceThreshold.
+            2) Retrive the best features by using SelectKBest.
+            
+        Args:
+            - threshold (float): Default = 0.1. The threshold for feature variances'. If the variance is below this threshold, it is recommended to be remove from the dataset.
+            - num_top_features (int): Default = 10. Number of top features to retrieve by SelectKBest.
+            - use_variance_threshold (bool): Default = True. Whether or not to use the VarianceThreshold method.
+            - use_selectkbest (bool): Default = True. Whether or not to use SelectKBest method.
+            
+        Returns:
+            - If successful, returns True
+            - if unsuccessful, returns None
+        """
+        
+        # check self.X_train is not empty
+        if self.X_train is None:
+            logging.error("self.X_train is empty. Make sure to get features and labels before calling this function.")
+            return None
+        
+        try:
+            frame = self.frame.copy()
+            feature_names = frame.drop(columns=[self.label_name]).columns
+            
+            if use_variance_threshold:
+                
+                logging.info("VarianceThreshold method selected. Retrieving low variance features now.")
+                
+                # instantiate the object
+                selector = VarianceThreshold(threshold=threshold)
+                selector.fit(X=self.X_train) # get the variances of the features
+                mask = selector.get_support() # get a boolean mask of the variances
+                selected_features = feature_names[mask]
+                
+                logging.info(f"Selected Features from VarianceThreshold: {selected_features}")
+                
+                poor_features = set(feature_names) - set(selected_features)
+                if poor_features:
+                    logging.info(f"Suggested Features to Remove: {poor_features}")
+                    self.worst_features = poor_features
+                else:
+                    logging.info("No features recommended for removal.")
+                    
+            if use_selectkbest:
+                
+                logging.info(f"SelectKBest method selected. Retrieving the top {num_top_features} now.")
+                
+                # instantiate the object
+                selector = SelectKBest(score_func=f_classif, k=num_top_features)
+                selector.fit(X=self.X_train, y=self.y_train) # get the best features
+                mask = selector.get_support() # get the boolean mask
+                selected_features = feature_names[mask]
+                
+                self.best_features = list(selected_features)
+                self.selected_features_mask = mask
+                
+                # log the scores
+                logging.info(f"SelectKBest F-Statistic Scores: {selector.scores_}")
+                logging.info(f"SelectKBest p-values: {selector.pvalues_}")
+                
+                best_features = list(selected_features)
+                best_scores = list(selector.scores_)
+                best_pvalues = list(selector.pvalues_)
+                
+                # log the results of each feature
+                for feature, score, pvalue in zip(best_features, best_scores, best_pvalues):
+                    logging.info(f"Feature Name: {feature} | F-Statistic Score: {score} | P-Value Score: {pvalue}")
+                    
+            logging.info("Feature analysis successfully completed.")
+            return True
+                
+        except Exception as e:
+            logging.error(f"Unable to analyze features. Received error {e}")
+    
+    def reduced_features(self, num_iterations: int = 2) -> bool:
+        """
+        Reduce the features in our training and test data using the stored selected_features_mask.
+        This function should only be used after features_analysis() has completed.
+        
+        Returns:
+            True if the feature reduction was successful; otherwise, returns None.
+        """
+        # Check that self.selected_features_mask is not None
+        if self.selected_features_mask is None:
+            logging.error("self.selected_features_mask is empty. Use features_analysis() first.")
+            return None
+
+        try:
+            self.X_train_full_reduced = self.X_train_full[:, self.selected_features_mask]
+            self.X_test_reduced = self.X_test[:, self.selected_features_mask]
+            self.X_train_reduced = self.X_train[:, self.selected_features_mask]
+            self.X_validator_reduced = self.X_validator[:, self.selected_features_mask]
+            
+            logging.info("Features successfully reduced using the selected mask.")
+            logging.info(f"Original Num Features: {self.X_train.shape[1]} | Reduced Num Features: {self.X_train_reduced.shape[1]}")
+            return True  # Return True to indicate success
+        except Exception as e:
+            logging.error(f"Unable to reduce features. Received error: {e}")
+            return None
+
+    #TODO: GET THE BEST MODEL     
+    def get_best_models(self, use_reduced_features: bool = True) -> True:
+        
+        """
+        Iterates through a dictionnary of classification models to find the best model for the dataset.
+        
+        Args:
+            - use_reduced_features (bool): Default = True. Whether or not to use the reduced features list to find the best model. If true, self.use_reduced_features is set to True.
+            - num_iterations (int): Default = 2. Number of times we want to search and test each model in our model dict.
+            
+        Returns:
+            - If successful, sets the best SkLearn model found to self.current_model, and the dictionnary key of that model to self.current_model_name.
+            - If unsuccessful, returns False
+        """
+        
+        
+        
+        # linear models
+        linear_models = {
+            'logistic_regression_clf': LogisticRegression(),
+            'ridge_clf': RidgeClassifier(),
+            'sgd_clf': SGDClassifier(),
+            'linear_svc': LinearSVC(),
+            'svc': SVC(),
+            'linear_discriminant': LinearDiscriminantAnalysis(),
+            'quadratic_discriminant': QuadraticDiscriminantAnalysis()
+        }
+        
+        # non_linear models
+        non_linear_models = {
+            'decision_tree_clf': DecisionTreeClassifier(),
+            'rand_forest_clf': RandomForestClassifier(),
+            'extra_trees_clf': ExtraTreesClassifier(),
+            'gradient_boost_clf': GradientBoostingClassifier(),
+            'hist_boost_clf': HistGradientBoostingClassifier(),
+            'k_neighbours_clf': KNeighborsClassifier(),
+            'gaussian_clf': GaussianProcessClassifier(),
+            'mlp_clf': MLPClassifier()
+        }
+        
+        # combined dict with all models
+        all_models = {
+            **linear_models,
+            **non_linear_models
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        pass          
     
 """Classification Label/Target Predictor Class"""
 class ClfLabelPredictor:
