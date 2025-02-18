@@ -1,0 +1,223 @@
+INFO - classes.py - 55 - Opening file /Users/aryanvafadar/Documents/GitHub/machine_learning_models/files/input_files/heart.csv to create into a pandas dataframe.
+INFO - classes.py - 61 - Initial DataFrame successfully created and set to self.initial_frame
+INFO - classes.py - 62 - Shape of Initial Frame: (918, 12)
+INFO - classes.py - 63 - Initial Frame Columns: Index(['age', 'sex', 'chestpaintype', 'restingbp', 'cholesterol', 'fastingbs',
+       'restingecg', 'maxhr', 'exerciseangina', 'oldpeak', 'st_slope',
+       'heartdisease'],
+      dtype='object')
+INFO - classes.py - 64 - Initial Frame DataTypes: {'age': dtype('int64'), 'sex': dtype('O'), 'chestpaintype': dtype('O'), 'restingbp': dtype('int64'), 'cholesterol': dtype('int64'), 'fastingbs': dtype('int64'), 'restingecg': dtype('O'), 'maxhr': dtype('int64'), 'exerciseangina': dtype('O'), 'oldpeak': dtype('float64'), 'st_slope': dtype('O'), 'heartdisease': dtype('int64')}
+INFO - classes.py - 65 - Intial Frame Contains Null Values?: age               False
+sex               False
+chestpaintype     False
+restingbp         False
+cholesterol       False
+fastingbs         False
+restingecg        False
+maxhr             False
+exerciseangina    False
+oldpeak           False
+st_slope          False
+heartdisease      False
+dtype: bool
+INFO - classes.py - 66 - Total Number of Null Values in Each Column: age               0
+sex               0
+chestpaintype     0
+restingbp         0
+cholesterol       0
+fastingbs         0
+restingecg        0
+maxhr             0
+exerciseangina    0
+oldpeak           0
+st_slope          0
+heartdisease      0
+dtype: int64
+INFO - classes.py - 242 - Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.
+INFO - classes.py - 246 - Whitespaces from column headers have been removed.
+INFO - classes.py - 250 - Whitespaces removed from rows/samples in the dataset.
+INFO - classes.py - 254 - Special characters, symbols and commas removed from the frame.
+INFO - classes.py - 256 - Self.initial_frame has been cleaned. New cleaned frame has been set to self.cleaned_frame
+INFO - classes.py - 276 - Frame encoding function has been called. All string data will be converted to numeric (int).
+INFO - classes.py - 281 - Self.cleaned_frame has been copied.
+INFO - classes.py - 285 - SkLearn OneHotEncoder has been instantiated.
+INFO - classes.py - 288 - Iterating through the dataframe to search for columns whose data is of type object.
+INFO - classes.py - 297 - Number of uniques found in column sex: 2
+INFO - classes.py - 301 - Because column sex has 2 unique values, it will be binary encoded.
+INFO - classes.py - 308 - Encoding completed. Mapping: {'M': 0, 'F': 1}
+INFO - classes.py - 297 - Number of uniques found in column chestpaintype: 4
+INFO - classes.py - 312 - Because column chestpaintype has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column chestpaintype has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 297 - Number of uniques found in column restingecg: 3
+INFO - classes.py - 312 - Because column restingecg has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column restingecg has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 297 - Number of uniques found in column exerciseangina: 2
+INFO - classes.py - 301 - Because column exerciseangina has 2 unique values, it will be binary encoded.
+INFO - classes.py - 308 - Encoding completed. Mapping: {'N': 0, 'Y': 1}
+INFO - classes.py - 297 - Number of uniques found in column st_slope: 3
+INFO - classes.py - 312 - Because column st_slope has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column st_slope has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 327 - Dataframe has finished being encoded. Label/Target column will now be removed and re-added to the end of the frame.
+INFO - classes.py - 330 - Label column heartdisease has been removed and readded to the end of the dataframe.
+INFO - classes.py - 1421 - Shape of DataFrame: (918, 19)
+INFO - classes.py - 1432 - Number of Columns in DataFrame: 19
+INFO - classes.py - 1441 - List of Columns: ['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr', 'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA', 'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH', 'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat', 'st_slope_Up', 'heartdisease']
+INFO - classes.py - 1442 - List of Features: ['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr', 'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA', 'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH', 'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat', 'st_slope_Up']
+INFO - classes.py - 1443 - Label Name: heartdisease
+INFO - classes.py - 1447 - Shape of Features Frame: (918, 18) | Shape of Label Frame: (918,)
+INFO - classes.py - 1451 - Split Number 1 Completed
+INFO - classes.py - 1452 - Shape of X_train_full: (688, 18) | Shape of y_train_full: (688,)
+INFO - classes.py - 1453 - Shape of X_test: (230, 18) | Shape of y_test: (230,)
+INFO - classes.py - 1457 - Split Number 2 Completed
+INFO - classes.py - 1458 - Shape of X_train: (516, 18) | Shape of y_train: (516,)
+INFO - classes.py - 1459 - Shape of X_validator: (172, 18) | Shape of y_validator: (172,)
+INFO - classes.py - 1461 - Features and labels retrieved. Training and testing data created.
+INFO - classes.py - 1465 - Standardizer object instantiated for StandardScaler()
+INFO - classes.py - 1469 - self.X_train has been standardized.
+INFO - classes.py - 1473 - self.X_validator has been standardized.
+INFO - classes.py - 1476 - self.X_test has been standardized.
+INFO - classes.py - 1478 - X_train shape: (516, 18)
+INFO - classes.py - 1479 - X_train sample: [[-0.67566314 -0.46272848 -1.36699339  0.41652165 -0.55944356  0.61909318
+  -0.81188915 -0.83615925 -1.13277793 -0.46272848  1.95510355 -0.23953507
+  -0.49636359  0.81517859 -0.50242132 -0.28195373 -1.00778222  1.16917598]
+ [-0.25699946 -0.46272848 -1.2543237  -0.22958408 -0.55944356 -0.50410158
+  -0.81188915 -0.27606642 -1.13277793 -0.46272848  1.95510355 -0.23953507
+  -0.49636359  0.81517859 -0.50242132 -0.28195373 -1.00778222  1.16917598]
+ [-0.15233354 -0.46272848 -2.09934636 -1.8923562   1.78749041 -2.09206658
+   1.23169524 -0.08936882  0.88278556 -0.46272848 -0.51148186 -0.23953507
+  -0.49636359  0.81517859 -0.50242132 -0.28195373  0.99227788 -0.85530324]
+ [ 0.99899158 -0.46272848  0.99907008 -1.8923562   1.78749041  0.69655489
+  -0.81188915  2.61774649  0.88278556 -0.46272848 -0.51148186 -0.23953507
+  -0.49636359 -1.22672506  1.99036139 -0.28195373 -1.00778222  1.16917598]
+ [ 1.52232117 -0.46272848  2.68911541  0.71106986  1.78749041  0.54163147
+   1.23169524  0.65742161 -1.13277793 -0.46272848  1.95510355 -0.23953507
+   2.01465221 -1.22672506 -0.50242132 -0.28195373  0.99227788 -0.85530324]]
+INFO - classes.py - 1480 - y_train shape: (516,)
+INFO - classes.py - 1483 - self.X_train_full converted to numpy array.
+INFO - classes.py - 1503 - Features Variance: [9.10210925e+01 1.63796309e-01 3.40962106e+02 1.10004471e+04
+ 1.76123496e-01 6.47969637e+02 2.38741803e-01 1.17332644e+00
+ 2.47699348e-01 1.46817114e-01 1.71306703e-01 5.08868814e-02
+ 1.63796309e-01 2.40797390e-01 1.58599243e-01 6.98688480e-02
+ 2.49980986e-01 2.43609299e-01]
+INFO - classes.py - 1550 - VarianceThreshold method selected. Retrieving low variance features now.
+INFO - classes.py - 1558 - VarianceThreshold Mask Type: <class 'numpy.ndarray'>
+INFO - classes.py - 1559 - VarianceThreshold Mask Shape: (18,)
+INFO - classes.py - 1560 - Selected Features from VarianceThreshold: Index(['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr',
+       'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA',
+       'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH',
+       'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat',
+       'st_slope_Up'],
+      dtype='object')
+INFO - classes.py - 1567 - No features recommended for removal.
+INFO - classes.py - 1571 - SelectKBest method selected. Retrieving the top 10 now.
+INFO - classes.py - 1579 - SelectKBest Mask: [ True  True False False  True  True  True  True  True  True False False
+ False False False False  True  True]
+INFO - classes.py - 1580 - SelectKBest Mask Type: <class 'numpy.ndarray'>
+INFO - classes.py - 1581 - SelectKBest Mask Shape: (18,)
+INFO - classes.py - 1587 - SelectKBest F-Statistic Scores: [4.77945196e+01 5.24303987e+01 9.16512531e-01 2.38652302e+01
+ 3.93631428e+01 8.90326742e+01 1.45665964e+02 7.99406889e+01
+ 1.66278591e+02 1.15123314e+02 1.95799400e+01 2.11331828e-01
+ 8.37113612e-01 3.34090156e+00 1.73942031e+00 4.28654845e+00
+ 2.29905251e+02 3.05876655e+02]
+INFO - classes.py - 1588 - SelectKBest p-values: [1.40872931e-11 1.63679158e-12 3.38842401e-01 1.38227801e-06
+ 7.47702559e-10 1.33917397e-19 1.05327829e-29 6.95075587e-18
+ 3.68656266e-33 2.25828963e-24 1.17862045e-05 6.45919905e-01
+ 3.60652599e-01 6.81570991e-02 1.87799578e-01 3.89138243e-02
+ 3.44240493e-43 4.39639910e-54]
+INFO - classes.py - 1596 - Feature Name: age | F-Statistic Score: 47.79451960019441 | P-Value Score: 1.4087293106767744e-11
+INFO - classes.py - 1596 - Feature Name: sex | F-Statistic Score: 52.430398660444425 | P-Value Score: 1.6367915795580318e-12
+INFO - classes.py - 1596 - Feature Name: fastingbs | F-Statistic Score: 0.9165125309226652 | P-Value Score: 0.33884240137817667
+INFO - classes.py - 1596 - Feature Name: maxhr | F-Statistic Score: 23.865230202760312 | P-Value Score: 1.3822780135861924e-06
+INFO - classes.py - 1596 - Feature Name: exerciseangina | F-Statistic Score: 39.36314278510176 | P-Value Score: 7.477025590088353e-10
+INFO - classes.py - 1596 - Feature Name: oldpeak | F-Statistic Score: 89.0326741827479 | P-Value Score: 1.3391739667498727e-19
+INFO - classes.py - 1596 - Feature Name: chestpaintype_ASY | F-Statistic Score: 145.66596397482422 | P-Value Score: 1.0532782855395303e-29
+INFO - classes.py - 1596 - Feature Name: chestpaintype_ATA | F-Statistic Score: 79.94068892959679 | P-Value Score: 6.950755871380006e-18
+INFO - classes.py - 1596 - Feature Name: st_slope_Flat | F-Statistic Score: 166.27859056812315 | P-Value Score: 3.6865626563698865e-33
+INFO - classes.py - 1596 - Feature Name: st_slope_Up | F-Statistic Score: 115.1233139661645 | P-Value Score: 2.2582896277177528e-24
+INFO - classes.py - 1598 - Feature analysis successfully completed.
+INFO - classes.py - 1617 - Shape self.X_train_full: (688, 18)
+INFO - classes.py - 1625 - Features successfully reduced using the selected mask.
+INFO - classes.py - 1626 - Original Num Features: 18 | Reduced Num Features: 10
+INFO - classes.py - 1675 - get_best_model() function called. List of models to test: [LogisticRegression(max_iter=10000), RidgeClassifier(), SGDClassifier(max_iter=10000), LinearSVC(max_iter=10000), SVC(probability=True), LinearDiscriminantAnalysis(), QuadraticDiscriminantAnalysis(), DecisionTreeClassifier(), RandomForestClassifier(), ExtraTreesClassifier(), GradientBoostingClassifier(), HistGradientBoostingClassifier(), KNeighborsClassifier(), GaussianProcessClassifier(), MLPClassifier(max_iter=10000)]
+INFO - classes.py - 1676 - User selected 3 number of iterations
+INFO - classes.py - 1699 - Iteration 1 in getting the best model.
+INFO - classes.py - 1703 - Currently testing model: LogisticRegression(max_iter=10000)
+INFO - classes.py - 1706 - LogisticRegression(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1740 - New best model: logistic_regression_clf with F1: 0.8524590163934426, Accuracy: 0.8430232558139535
+INFO - classes.py - 1703 - Currently testing model: RidgeClassifier()
+INFO - classes.py - 1706 - RidgeClassifier() has been successfully trained.
+INFO - classes.py - 1740 - New best model: ridge_clf with F1: 0.8666666666666667, Accuracy: 0.8604651162790697
+INFO - classes.py - 1703 - Currently testing model: SGDClassifier(max_iter=10000)
+INFO - classes.py - 1706 - SGDClassifier(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: LinearSVC(max_iter=10000)
+INFO - classes.py - 1706 - LinearSVC(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: SVC(probability=True)
+INFO - classes.py - 1706 - SVC(probability=True) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: LinearDiscriminantAnalysis()
+INFO - classes.py - 1706 - LinearDiscriminantAnalysis() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: QuadraticDiscriminantAnalysis()
+INFO - classes.py - 1706 - QuadraticDiscriminantAnalysis() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: DecisionTreeClassifier()
+INFO - classes.py - 1706 - DecisionTreeClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: RandomForestClassifier()
+INFO - classes.py - 1706 - RandomForestClassifier() has been successfully trained.
+INFO - classes.py - 1740 - New best model: rand_forest_clf with F1: 0.8791208791208791, Accuracy: 0.872093023255814
+INFO - classes.py - 1703 - Currently testing model: ExtraTreesClassifier()
+INFO - classes.py - 1706 - ExtraTreesClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: GradientBoostingClassifier()
+INFO - classes.py - 1706 - GradientBoostingClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: HistGradientBoostingClassifier()
+INFO - classes.py - 1706 - HistGradientBoostingClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: KNeighborsClassifier()
+INFO - classes.py - 1706 - KNeighborsClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: GaussianProcessClassifier()
+INFO - classes.py - 1706 - GaussianProcessClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: MLPClassifier(max_iter=10000)
+INFO - classes.py - 1706 - MLPClassifier(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1699 - Iteration 2 in getting the best model.
+INFO - classes.py - 1703 - Currently testing model: LogisticRegression(max_iter=10000)
+INFO - classes.py - 1706 - LogisticRegression(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: RidgeClassifier()
+INFO - classes.py - 1706 - RidgeClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: SGDClassifier(max_iter=10000)
+INFO - classes.py - 1706 - SGDClassifier(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: LinearSVC(max_iter=10000)
+INFO - classes.py - 1706 - LinearSVC(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: SVC(probability=True)
+INFO - classes.py - 1706 - SVC(probability=True) has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: LinearDiscriminantAnalysis()
+INFO - classes.py - 1706 - LinearDiscriminantAnalysis() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: QuadraticDiscriminantAnalysis()
+INFO - classes.py - 1706 - QuadraticDiscriminantAnalysis() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: DecisionTreeClassifier()
+INFO - classes.py - 1706 - DecisionTreeClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: RandomForestClassifier()
+INFO - classes.py - 1706 - RandomForestClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: ExtraTreesClassifier()
+INFO - classes.py - 1706 - ExtraTreesClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: GradientBoostingClassifier()
+INFO - classes.py - 1706 - GradientBoostingClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: HistGradientBoostingClassifier()
+INFO - classes.py - 1706 - HistGradientBoostingClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: KNeighborsClassifier()
+INFO - classes.py - 1706 - KNeighborsClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: GaussianProcessClassifier()
+INFO - classes.py - 1706 - GaussianProcessClassifier() has been successfully trained.
+INFO - classes.py - 1703 - Currently testing model: MLPClassifier(max_iter=10000)
+INFO - classes.py - 1706 - MLPClassifier(max_iter=10000) has been successfully trained.
+INFO - classes.py - 1753 -              Model_Name                                              Model                                       Model_Params  ...  Recall_Score  Precision_Score  ROC_AUC_Score
+8       rand_forest_clf  (DecisionTreeClassifier(max_features='sqrt', r...  {'bootstrap': True, 'ccp_alpha': 0.0, 'class_w...  ...      0.919540         0.842105       0.925287
+1             ridge_clf                                  RidgeClassifier()  {'alpha': 1.0, 'class_weight': None, 'copy_X':...  ...      0.896552         0.838710            NaN
+5   linear_discriminant                       LinearDiscriminantAnalysis()  {'covariance_estimator': None, 'n_components':...  ...      0.896552         0.838710       0.922650
+3            linear_svc                          LinearSVC(max_iter=10000)  {'C': 1.0, 'class_weight': None, 'dual': 'auto...  ...      0.896552         0.829787            NaN
+11       hist_boost_clf                   HistGradientBoostingClassifier()  {'categorical_features': 'warn', 'class_weight...  ...      0.873563         0.835165       0.908452
+
+[5 rows x 9 columns]
+INFO - classes.py - 1757 - Top Model RandomForestClassifier() Scores:
+INFO - classes.py - 1758 - Accuracy: 0.872093023255814 | F1 Score: 0.8791208791208791 | Recall Score: 0.9195402298850575 | Precision Score: 0.8421052631578947
+ERROR - classes.py - 1783 - self.current_model is not RidgeClassifier. Optimization aborted.

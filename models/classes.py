@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import joblib
+from pathlib import Path
 from config import output_files_folder, get_prediction_csv, get_ml_file
 
 # import sklearn metrics, preprocessing and training/testing data splits
 from sklearn.base import clone
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, f1_score, accuracy_score, recall_score, precision_score, roc_auc_score
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression, f_classif
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV, RepeatedKFold
@@ -1371,18 +1372,32 @@ class ClfModelTester:
         self.selected_features_mask = None
         
         # reduced training and testing sets using the top features selected by SelectKBest
+        # Split 1
         self.X_train_full_reduced = None
         self.X_test_reduced = None
+        # Split 2
         self.X_train_reduced = None
         self.X_validator_reduced = None
         
         # bool if user uses reduced_features to find the best model
-        self.use_reduced_features = False
+        self.use_reduced_features = None
         
         # model information from get_best_models()
+        self.best_models_frame = None
         self.current_model = None
         self.current_model_name = None
+        self.current_model_params = None
+        self.f1 = 0
+        self.accuracy = 0
+        self.recall = 0
+        self.precision = 0
+        self.roc_auc = 0
         
+        # model tuning information
+        self.best_params = None
+        self.best_score = None
+        self.search_results = None
+          
     def get_features_labels(self, model_test_size: float, label: str) -> np.array:
         """
         Takes a pandas DataFrame and splits the data into two sets of training and testing data.  The first split is used to test the final tuned model, and the second split is only used to find the best model and tune it. The functions sets the results to the various self.train and self.test class attributes.
@@ -1437,16 +1452,6 @@ class ClfModelTester:
             logging.info(f"Shape of X_train_full: {self.X_train_full.shape} | Shape of y_train_full: {self.y_train_full.shape}")
             logging.info(f"Shape of X_test: {self.X_test.shape} | Shape of y_test: {self.y_test.shape}")
             
-            # standardize the training data, not the testing data
-            standardizer = StandardScaler()
-            logging.info("Standardizer object instantiated for StandardScaler()")
-            
-            self.X_train_full = standardizer.fit_transform(self.X_train_full)
-            logging.info("self.X_train_full has been standardized")
-            
-            self.X_test = standardizer.transform(self.X_test)
-            logging.info("self.X_test has been standardized")
-            
             # split again
             self.X_train, self.X_validator, self.y_train, self.y_validator = train_test_split(self.X_train_full, self.y_train_full, test_size=model_test_size, random_state=6712792)
             logging.info("Split Number 2 Completed")
@@ -1454,6 +1459,28 @@ class ClfModelTester:
             logging.info(f"Shape of X_validator: {self.X_validator.shape} | Shape of y_validator: {self.y_validator.shape}")
             
             logging.info("Features and labels retrieved. Training and testing data created.")
+            
+            # standardize the data
+            standardizer = StandardScaler()
+            logging.info("Standardizer object instantiated for StandardScaler()")
+
+            # Fit only on the final training data (X_train)
+            self.X_train = standardizer.fit_transform(self.X_train)
+            logging.info("self.X_train has been standardized.")
+
+            # Transform the validation and test sets using the scaler fitted on X_train
+            self.X_validator = standardizer.transform(self.X_validator)
+            logging.info("self.X_validator has been standardized.")
+
+            self.X_test = standardizer.transform(self.X_test)
+            logging.info("self.X_test has been standardized.")
+            
+            logging.info(f"X_train shape: {np.shape(self.X_train)}")
+            logging.info(f"X_train sample: {self.X_train[:5]}")
+            logging.info(f"y_train shape: {np.shape(self.y_train)}")
+            
+            self.X_train_full = self.X_train_full.to_numpy()
+            logging.info("self.X_train_full converted to numpy array.")
             
             
         except Exception as e:
@@ -1528,6 +1555,8 @@ class ClfModelTester:
                 mask = selector.get_support() # get a boolean mask of the variances
                 selected_features = feature_names[mask]
                 
+                logging.info(f"VarianceThreshold Mask Type: {type(mask)}")
+                logging.info(f"VarianceThreshold Mask Shape: {mask.shape}")
                 logging.info(f"Selected Features from VarianceThreshold: {selected_features}")
                 
                 poor_features = set(feature_names) - set(selected_features)
@@ -1546,6 +1575,10 @@ class ClfModelTester:
                 selector.fit(X=self.X_train, y=self.y_train) # get the best features
                 mask = selector.get_support() # get the boolean mask
                 selected_features = feature_names[mask]
+                
+                logging.info(f"SelectKBest Mask: {mask}")
+                logging.info(f"SelectKBest Mask Type: {type(mask)}")
+                logging.info(f"SelectKBest Mask Shape: {mask.shape}")
                 
                 self.best_features = list(selected_features)
                 self.selected_features_mask = mask
@@ -1580,6 +1613,8 @@ class ClfModelTester:
         if self.selected_features_mask is None:
             logging.error("self.selected_features_mask is empty. Use features_analysis() first.")
             return None
+        
+        logging.info(f"Shape self.X_train_full: {self.X_train_full.shape}")
 
         try:
             self.X_train_full_reduced = self.X_train_full[:, self.selected_features_mask]
@@ -1593,9 +1628,8 @@ class ClfModelTester:
         except Exception as e:
             logging.error(f"Unable to reduce features. Received error: {e}")
             return None
-
-    #TODO: GET THE BEST MODEL     
-    def get_best_models(self, use_reduced_features: bool = True) -> True:
+    
+    def get_best_models(self, csv_name: str, num_iterations: int = 2, use_reduced_features: bool = True) -> bool:
         
         """
         Iterates through a dictionnary of classification models to find the best model for the dataset.
@@ -1609,15 +1643,13 @@ class ClfModelTester:
             - If unsuccessful, returns False
         """
         
-        
-        
         # linear models
         linear_models = {
-            'logistic_regression_clf': LogisticRegression(),
+            'logistic_regression_clf': LogisticRegression(max_iter=10000),
             'ridge_clf': RidgeClassifier(),
-            'sgd_clf': SGDClassifier(),
-            'linear_svc': LinearSVC(),
-            'svc': SVC(),
+            'sgd_clf': SGDClassifier(max_iter=10000),
+            'linear_svc': LinearSVC(max_iter=10000),
+            'svc': SVC(probability=True),
             'linear_discriminant': LinearDiscriminantAnalysis(),
             'quadratic_discriminant': QuadraticDiscriminantAnalysis()
         }
@@ -1631,7 +1663,7 @@ class ClfModelTester:
             'hist_boost_clf': HistGradientBoostingClassifier(),
             'k_neighbours_clf': KNeighborsClassifier(),
             'gaussian_clf': GaussianProcessClassifier(),
-            'mlp_clf': MLPClassifier()
+            'mlp_clf': MLPClassifier(max_iter=10000)
         }
         
         # combined dict with all models
@@ -1640,21 +1672,294 @@ class ClfModelTester:
             **non_linear_models
         }
         
+        logging.info(f"get_best_model() function called. List of models to test: {list(all_models.values())}")
+        logging.info(f"User selected {num_iterations + 1} number of iterations")
         
+        try:
+            
+            if use_reduced_features:
+                self.use_reduced_features = True
+                
+            else:
+                self.use_reduced_features = False
+            
+            # set feature training and testing values
+            X_train, X_test = (
+                (self.X_train_reduced, self.X_validator_reduced)
+                if use_reduced_features
+                else (self.X_train, self.X_validator)
+            )
+            y_train, y_test = self.y_train, self.y_validator
+            
+            # results dict to store the model testing results
+            results = []
+                
+            for num in range(num_iterations):
+    
+                logging.info(f"Iteration {num+1} in getting the best model.")
+                
+                for name, model in all_models.items():
+                    
+                    logging.info(f"Currently testing model: {model}")
+                    
+                    model.fit(X_train, y_train) # train the model
+                    logging.info(f"{model} has been successfully trained.")
+                    predict = model.predict(X_test) # make predictions on the testing features
+                    predic_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
+                    
+                    # measure results
+                    f1 = f1_score(y_true=y_test, y_pred=predict, average='binary', zero_division=0)
+                    accuracy = accuracy_score(y_true=y_test, y_pred=predict)
+                    recall = recall_score(y_true=y_test, y_pred=predict, average='binary', zero_division=0)
+                    precision = precision_score(y_true=y_test, y_pred=predict, average='binary', zero_division=0)
+                    roc_auc = roc_auc_score(y_true=y_test, y_score=predic_proba) if predic_proba is not None else None
+                    
+                    # add to results dict
+                    results.append({
+                        'Model_Name': name,
+                        'Model': model,
+                        'Model_Params': model.get_params(),
+                        'Testing_Iteration': num + 1,
+                        'Accuracy_Score': accuracy,
+                        'F1_Score': f1,
+                        'Recall_Score': recall,
+                        'Precision_Score': precision,
+                        'ROC_AUC_Score': roc_auc
+                    })
+                    
+                    # check scores of the current model. Update self. attributes if needed
+                    if f1 > self.f1 and accuracy > self.accuracy:
+                        self.current_model = model
+                        self.current_model_name = name
+                        self.f1 = f1
+                        self.accuracy = accuracy
+                        self.recall = recall
+                        self.precision = precision
+                        self.roc_auc = roc_auc
+                        
+                        logging.info(f"New best model: {name} with F1: {f1}, Accuracy: {accuracy}")
+                        
+            # Save results to a DataFrame
+            results_df = pd.DataFrame(results) # create the frame
+            results_df.sort_values(by=['F1_Score', 'Accuracy_Score'], ascending=False, inplace=True)
+            results_df.drop_duplicates(subset=['Model'], keep='first', inplace=True)
+            
+            # export results frame as a csv to best_models_results folder
+            model_file_name = f"best_models_for_{csv_name}"
+            model_file_path = f"{Path.cwd().joinpath('files').joinpath('best_models_results')}"
+            results_df.to_csv(path_or_buf=f"{model_file_path}/{model_file_name}.csv", index=False)
+            
+            # Display the top 5 models and set to self.best_models_frame
+            logging.info(results_df.head(5))
+            self.best_models_frame = results_df
+            
+            # log the results of the top model
+            logging.info(f"Top Model {self.current_model} Scores:")
+            logging.info(f"Accuracy: {self.accuracy} | F1 Score: {self.f1} | Recall Score: {self.recall} | Precision Score: {self.precision}")
+            
+            return True
+                            
+        except Exception as e:
+            logging.exception(f"Unable to get the best model. Received error: {e}")
+            return None   
+    
+    def optimize_ridge_classifier(self, optimize_method: str = 'random', num_iterations: int = 25, cv: int = 5, scoring: str = 'accuracy', refit: bool = True, n_jobs: int = -1):
+        """
+        Optimizes RidgeClassifier() model using either GridSearchCV or RandomSearchCV.
         
+        The total number of model fits if RandomSearchCV is used can be calculated by num_iterations * cv. For small datasets, a higher cv between 5-10 is recommended. For datasets with lots of hyperparameters, a higher num_iterations and lower cv should be used. For larger datasets, a cv between 3-5 should be used and num_iterations can be increased gradually.
         
+        Args:
+            - optimized_method (str): 
+            - num_iterations (int): Default = 25. Controls the number of random hyperparameter combinations for RandomSearchCV.
+            - cv (int): Default = 5. Controls how the dataset is split during model evaluation. 
+            
+        """
         
+            # Check current model
         
+        # check self.current_model is RidgeClassifier
+        if not isinstance(self.current_model, RidgeClassifier):
+            logging.error("self.current_model is not RidgeClassifier. Optimization aborted.")
+            return None
         
+        # Check optimization method
+        optimize_method = optimize_method.lower()
+        if optimize_method not in ['grid', 'random']:
+            logging.error(f"Invalid optimization method: {optimize_method}. Use 'grid' or 'random'.")
+            return None
         
+        # Log search details
+        logging.info(f"Starting RidgeClassifier optimization using {optimize_method.upper()}SearchCV.")
+        if optimize_method == 'grid':
+            logging.info("num_iterations is ignored for GridSearch.")
         
+        # Hyperparameter search spaces
+        grid_params = {
+            'alpha': [0.01, 0.1, 1, 10, 100],
+            'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
+            'tol': [1e-3, 1e-4, 1e-5]
+        }
         
+        rand_params = {
+            'alpha': stats.uniform(0.01, 1.99),  # Uniform distribution for alpha
+            'solver': ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'],
+            'tol': [1e-3, 1e-4, 1e-5]
+        }
         
-        pass          
+        try:
+            # instantiate the cross-validator object
+            searchcv = RandomizedSearchCV if optimize_method == 'random' else GridSearchCV
+            
+            # keywords arugments; params that are the same for both cv method
+            kwargs = {
+            'estimator': self.current_model,
+            'scoring': scoring,
+            'n_jobs': n_jobs,
+            'refit': refit,
+            'cv': cv
+            }
+            
+            if optimize_method == 'grid':
+                kwargs["param_grid"] = grid_params
+            else:
+                kwargs['param_distributions'] = rand_params
+                kwargs['n_iter'] = num_iterations
+                total_fits = num_iterations * cv
+                logging.info(f"Total model fits for RandomSearchCV: {total_fits}")
+                
+            X_train = self.X_train_reduced if self.use_reduced_features else self.X_train
+            y_train = self.y_train
+                
+            # create and train cross validator model
+            search = searchcv(**kwargs)
+            search.fit(X=X_train, y=y_train)
+            
+            # get best params, score and search results
+            self.best_params = search.best_params_
+            self.best_score = search.best_score_
+            self.search_results = pd.DataFrame(search.cv_results_)
+            logging.info(self.search_results.head(10))
+            
+            logging.info(f"Best Parameters: {self.best_params}")
+            logging.info(f"Best Cross-Validation Score: {self.best_score}")
+            
+            # Evaluate on test set if avaialble
+            if hasattr(self, 'X_validator') and hasattr(self, 'y_validator'):
+                
+                X_validator = self.X_validator_reduced if self.use_reduced_features else self.X_validator # get our X_test
+                y_test = self.y_validator # get our y_test 
+                
+                val_predictions = search.best_estimator_.predict(X_validator) # make predictions
+                val_score = accuracy_score(y_true=y_test, y_pred=val_predictions) # get the accuray score
+                logging.info(f"Validation Set Accuracy: {val_score}") # log the score
+                
+            # Compare with previous model accuracy
+            if self.best_score < self.accuracy:
+                logging.warning(f"Tuning score ({self.best_score}) is lower than current model score ({self.accuracy}).")
+            else:
+                logging.info(f"Tuned model improves performance. New Score: {self.best_score} (Old: {self.accuracy}).")
+                # Update current model
+                if refit:
+                    self.current_model = search.best_estimator_
+                    logging.info(f"self.current_model has been updated by the best estimator found from {searchcv.__name__}")
+            
+            return True
+            
+        except Exception as e:
+            logging.error(f"Unable to optimize RidgeClassifier. Received error: {e}")    
+            return None
+    
+    def optimize_random_forest(self, optimize_method: str = 'random', num_iterations: int = 25, cv: int = 5, scoring: str = 'accuracy', refit: bool = True, n_jobs: int = -1):
+        
+        """
+        Optimizes a RandomForest() machine learning model using either GridSearchCV or RandomSearchCV.
+        
+        Args:
+            -
+            
+        Returns:
+            - 
+        """
+        
+        # check self.current_model = RandomForest
+        if not isinstance(self.current_model, RandomForestClassifier):
+            logging.error(f"Unable to perform optimization. self.current_model is not RandomForestClassifier. It is {self.current_model}.")
+            
+        # check optimization method is valid
+        optimize_method = optimize_method.lower()
+        if optimize_method not in ['grid', 'random']:
+            logging.error(f"Invalid optimization method. Expected 'grid' or 'random'. Received {optimize_method}. Please retry.")
+            
+        # ignore num_iterations if optimize_method == 'grid'
+        if optimize_method == 'grid' and num_iterations:
+            logging.info("Num_iterations is ignored, as user selected GridSearchCV for the optimization method.")
+            
+        grid_params = {
+            'n_estimators': list(range(50, 1000, 50)),
+            'criterion': ['gini', 'entropy', 'log_loss'],
+            'max_depth': list(range(2, 100, 2)),
+            'min_samples_split': list(range(2, 100, 2)),
+            'min_samples_leaf': list(range(2, 100, 2))
+        }
+        
+        rand_params = {
+            'n_estimators': stats.randint(50, 1500),
+            'criterion': ['gini', 'entropy', 'log_loss'],
+            'max_depth': stats.randint(2, 200),
+            'min_samples_split': stats.randint(2, 200),
+            'min_samples_leaf': stats.randint(2, 200),
+            'min_impurity_decrease': stats.uniform(0.01, 1.0)
+        }
+        
+        kwargs = {
+            'estimator': self.current_model,
+            'scoring': scoring,
+            'n_jobs': n_jobs,
+            'refit': refit,
+            'cv': cv
+        }
+
+        try:
+            
+            # set searchcv variable depending on optimization method. 
+            searchcv = RandomizedSearchCV if optimize_method == 'random' else GridSearchCV
+            
+            # update kwargs dict based on user's optimization method
+            if optimize_method == 'grid':
+                kwargs['param_grid'] = grid_params
+            else:
+                kwargs['param_distributions'] = rand_params
+                kwargs['n_iter'] = num_iterations
+                total_fits = num_iterations * cv
+                logging.info(f"Total model fits for RandomSearchCV: {total_fits}")
+            
+            # set training and testing variables
+            X_train = self.X_train_reduced if self.use_reduced_features else self.X_train
+            y_train = self.y_train
+            
+            # instantiate the search object and pass in the kwargs dict as our params    
+            search = searchcv(**kwargs)
+            search.fit(X=X_train, y=y_train) # train model
+            
+            # get best score, params and turn search results into a pandas dataframe
+            # self.best_score = search.best_score_
+            # self.best_params = search.best_params_            
+        
+        except Exception as e:
+            logging.exception(f"Unable to optimize RandomForestClassifier(). Received error: {e}")
+            return None
+
+
+
+
+
+
     
 """Classification Label/Target Predictor Class"""
 class ClfLabelPredictor:
     pass
+
 
 """Class to Make Visualizations, Plots, Graphs and Charts on the Model Results"""
 class PlotVisualization:
