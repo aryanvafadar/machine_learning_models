@@ -1,5 +1,6 @@
 from config import get_input_csv
 from classes import DatasetCreator, ClfModelTester
+from sklearn.ensemble import RandomForestClassifier
 
 
 
@@ -11,15 +12,18 @@ def main():
     
     # instantiate the classifier model tester object
     clf = ClfModelTester(frame=encoded_frame)
-    clf.get_features_labels(model_test_size=0.25, label='heartdisease')
-    clf.get_feature_variance()
-    clf.features_analysis(threshold=0.10, num_top_features=10, use_variance_threshold=True, use_selectkbest=True)
-    clf.reduced_features()
+    clf.get_features_labels(model_test_size=0.28, label='heartdisease') # get features and labels
+    clf.get_feature_variance() # get feature variance to decide if any features need to be dropped
+    clf.features_analysis(threshold=0.10, num_top_features=10, use_variance_threshold=True, use_selectkbest=True) # get best and worse features
+    # clf.reduced_features() # optional function; reduce the number of features used to top x amount passed in features analysis
     
     # get the best models
-    clf.get_best_models(csv_name='heart_disease', num_iterations=2, use_reduced_features=False)
-    clf.optimize_ridge_classifier(optimize_method='random', num_iterations=1000, cv=5, scoring='accuracy', refit=True)
-
+    # clf.get_best_models(csv_name='heart_disease', num_iterations=2, use_reduced_features=False)
+    # clf.optimize_ridge_classifier(optimize_method='random', num_iterations=1000, cv=5, scoring='accuracy', refit=True)
+    clf.current_model = RandomForestClassifier()
+    clf.optimize_random_forest(optimize_method='random', num_iterations=50, cv=5)
+    clf.final_evaluation(use_tuned_params=True)
+    
 
 
 if __name__ == "__main__":

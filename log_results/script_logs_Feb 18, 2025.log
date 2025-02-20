@@ -1,0 +1,178 @@
+INFO - classes.py - 55 - Opening file /Users/aryanvafadar/Documents/GitHub/machine_learning_models/files/input_files/heart.csv to create into a pandas dataframe.
+INFO - classes.py - 61 - Initial DataFrame successfully created and set to self.initial_frame
+INFO - classes.py - 62 - Shape of Initial Frame: (918, 12)
+INFO - classes.py - 63 - Initial Frame Columns: Index(['age', 'sex', 'chestpaintype', 'restingbp', 'cholesterol', 'fastingbs',
+       'restingecg', 'maxhr', 'exerciseangina', 'oldpeak', 'st_slope',
+       'heartdisease'],
+      dtype='object')
+INFO - classes.py - 64 - Initial Frame DataTypes: {'age': dtype('int64'), 'sex': dtype('O'), 'chestpaintype': dtype('O'), 'restingbp': dtype('int64'), 'cholesterol': dtype('int64'), 'fastingbs': dtype('int64'), 'restingecg': dtype('O'), 'maxhr': dtype('int64'), 'exerciseangina': dtype('O'), 'oldpeak': dtype('float64'), 'st_slope': dtype('O'), 'heartdisease': dtype('int64')}
+INFO - classes.py - 65 - Intial Frame Contains Null Values?: age               False
+sex               False
+chestpaintype     False
+restingbp         False
+cholesterol       False
+fastingbs         False
+restingecg        False
+maxhr             False
+exerciseangina    False
+oldpeak           False
+st_slope          False
+heartdisease      False
+dtype: bool
+INFO - classes.py - 66 - Total Number of Null Values in Each Column: age               0
+sex               0
+chestpaintype     0
+restingbp         0
+cholesterol       0
+fastingbs         0
+restingecg        0
+maxhr             0
+exerciseangina    0
+oldpeak           0
+st_slope          0
+heartdisease      0
+dtype: int64
+INFO - classes.py - 242 - Frame cleaning function called. Making a copy of self.initial_frame before beginning cleaning.
+INFO - classes.py - 246 - Whitespaces from column headers have been removed.
+INFO - classes.py - 250 - Whitespaces removed from rows/samples in the dataset.
+INFO - classes.py - 254 - Special characters, symbols and commas removed from the frame.
+INFO - classes.py - 256 - Self.initial_frame has been cleaned. New cleaned frame has been set to self.cleaned_frame
+INFO - classes.py - 276 - Frame encoding function has been called. All string data will be converted to numeric (int).
+INFO - classes.py - 281 - Self.cleaned_frame has been copied.
+INFO - classes.py - 285 - SkLearn OneHotEncoder has been instantiated.
+INFO - classes.py - 288 - Iterating through the dataframe to search for columns whose data is of type object.
+INFO - classes.py - 297 - Number of uniques found in column sex: 2
+INFO - classes.py - 301 - Because column sex has 2 unique values, it will be binary encoded.
+INFO - classes.py - 308 - Encoding completed. Mapping: {'M': 0, 'F': 1}
+INFO - classes.py - 297 - Number of uniques found in column chestpaintype: 4
+INFO - classes.py - 312 - Because column chestpaintype has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column chestpaintype has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 297 - Number of uniques found in column restingecg: 3
+INFO - classes.py - 312 - Because column restingecg has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column restingecg has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 297 - Number of uniques found in column exerciseangina: 2
+INFO - classes.py - 301 - Because column exerciseangina has 2 unique values, it will be binary encoded.
+INFO - classes.py - 308 - Encoding completed. Mapping: {'N': 0, 'Y': 1}
+INFO - classes.py - 297 - Number of uniques found in column st_slope: 3
+INFO - classes.py - 312 - Because column st_slope has more than 2 unique values, it will be OneHotEncoded.
+INFO - classes.py - 316 - Column st_slope has been OneHotEncoded.
+INFO - classes.py - 320 - New dataframe with the encoded values has been created.
+INFO - classes.py - 324 - Original dataframe and new dataframe have been comibined on the y axis.
+INFO - classes.py - 327 - Dataframe has finished being encoded. Label/Target column will now be removed and re-added to the end of the frame.
+INFO - classes.py - 330 - Label column heartdisease has been removed and readded to the end of the dataframe.
+INFO - classes.py - 1432 - Shape of DataFrame: (918, 19)
+INFO - classes.py - 1443 - Number of Columns in DataFrame: 19
+INFO - classes.py - 1452 - List of Columns: ['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr', 'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA', 'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH', 'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat', 'st_slope_Up', 'heartdisease']
+INFO - classes.py - 1453 - List of Features: ['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr', 'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA', 'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH', 'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat', 'st_slope_Up']
+INFO - classes.py - 1454 - Label Name: heartdisease
+INFO - classes.py - 1458 - Shape of Features Frame: (918, 18) | Shape of Label Frame: (918,)
+INFO - classes.py - 1462 - Split Number 1 Completed
+INFO - classes.py - 1463 - Shape of X_train_full: (660, 18) | Shape of y_train_full: (660,)
+INFO - classes.py - 1464 - Shape of X_test: (258, 18) | Shape of y_test: (258,)
+INFO - classes.py - 1468 - Split Number 2 Completed
+INFO - classes.py - 1469 - Shape of X_train: (475, 18) | Shape of y_train: (475,)
+INFO - classes.py - 1470 - Shape of X_validator: (185, 18) | Shape of y_validator: (185,)
+INFO - classes.py - 1472 - Features and labels retrieved. Training and testing data created.
+INFO - classes.py - 1476 - Standardizer object instantiated for StandardScaler()
+INFO - classes.py - 1480 - self.X_train has been standardized.
+INFO - classes.py - 1484 - self.X_validator has been standardized.
+INFO - classes.py - 1487 - self.X_test has been standardized.
+INFO - classes.py - 1489 - X_train shape: (475, 18)
+INFO - classes.py - 1490 - X_train sample: [[-1.11123813 -0.5424739  -0.9750488  -1.89066886 -0.5522183   0.34101002
+   1.21406686  0.99319052  0.92100436 -0.44664857 -0.55546372 -0.24549513
+  -0.48680506  0.80224598 -0.5        -0.29488391  1.00210748 -0.85280287]
+ [ 0.1465175  -0.5424739   0.42283898  0.60924956 -0.5522183  -0.33176201
+   1.21406686  0.5348988   0.92100436 -0.44664857 -0.55546372 -0.24549513
+  -0.48680506  0.80224598 -0.5        -0.29488391  1.00210748 -0.85280287]
+ [ 0.4609564  -0.5424739  -0.24814715  0.52529708 -0.5522183  -0.25261236
+   1.21406686  1.90977396  0.92100436 -0.44664857 -0.55546372 -0.24549513
+   2.05421036 -1.24650048 -0.5        -0.29488391  1.00210748 -0.85280287]
+ [-0.06310844 -0.5424739  -0.4718092   0.53462513 -0.5522183  -0.9649592
+   1.21406686  1.90977396  0.92100436 -0.44664857 -0.55546372 -0.24549513
+  -0.48680506 -1.24650048  2.         -0.29488391  1.00210748 -0.85280287]
+ [ 0.98502125 -0.5424739  -2.03744351  0.95438755 -0.5522183  -0.60878578
+   1.21406686  0.07660708  0.92100436 -0.44664857 -0.55546372 -0.24549513
+  -0.48680506 -1.24650048  2.         -0.29488391 -0.99789695  1.17260394]]
+INFO - classes.py - 1491 - y_train shape: (475,)
+INFO - classes.py - 1494 - self.X_train_full converted to numpy array.
+INFO - classes.py - 1514 - Features Variance: [9.06788889e+01 1.66251148e-01 3.44940220e+02 1.09746539e+04
+ 1.73957759e-01 6.48422718e+02 2.38099174e-01 1.19766336e+00
+ 2.47649219e-01 1.45847107e-01 1.71430211e-01 5.15702479e-02
+ 1.63599633e-01 2.40596878e-01 1.58172635e-01 7.13016529e-02
+ 2.49963269e-01 2.44928834e-01]
+INFO - classes.py - 1561 - VarianceThreshold method selected. Retrieving low variance features now.
+INFO - classes.py - 1569 - VarianceThreshold Mask Type: <class 'numpy.ndarray'>
+INFO - classes.py - 1570 - VarianceThreshold Mask Shape: (18,)
+INFO - classes.py - 1571 - Selected Features from VarianceThreshold: Index(['age', 'sex', 'restingbp', 'cholesterol', 'fastingbs', 'maxhr',
+       'exerciseangina', 'oldpeak', 'chestpaintype_ASY', 'chestpaintype_ATA',
+       'chestpaintype_NAP', 'chestpaintype_TA', 'restingecg_LVH',
+       'restingecg_Normal', 'restingecg_ST', 'st_slope_Down', 'st_slope_Flat',
+       'st_slope_Up'],
+      dtype='object')
+INFO - classes.py - 1578 - No features recommended for removal.
+INFO - classes.py - 1582 - SelectKBest method selected. Retrieving the top 10 now.
+INFO - classes.py - 1590 - SelectKBest Mask: [ True  True False False  True  True  True  True  True  True False False
+ False False False False  True  True]
+INFO - classes.py - 1591 - SelectKBest Mask Type: <class 'numpy.ndarray'>
+INFO - classes.py - 1592 - SelectKBest Mask Shape: (18,)
+INFO - classes.py - 1598 - SelectKBest F-Statistic Scores: [ 31.09245793  53.68040998   1.91948392  26.72567699  39.22869634
+ 101.08473996 194.80139764  79.00848344 168.34742956  76.69132864
+  23.45962785   5.11253516   0.32163471   0.87848946   2.90929799
+   4.68923973 226.01111694 311.74783159]
+INFO - classes.py - 1599 - SelectKBest p-values: [4.14248868e-08 1.02609226e-12 1.66566516e-01 3.46658407e-07
+ 8.47723764e-10 1.10683307e-21 2.54204263e-37 1.30494911e-17
+ 3.79552403e-33 3.57307367e-17 1.73127768e-06 2.42070708e-02
+ 5.70895936e-01 3.49094054e-01 8.87267044e-02 3.08512229e-02
+ 4.91743204e-42 5.81235717e-54]
+INFO - classes.py - 1607 - Feature Name: age | F-Statistic Score: 31.092457932646123 | P-Value Score: 4.1424886803101906e-08
+INFO - classes.py - 1607 - Feature Name: sex | F-Statistic Score: 53.68040998106995 | P-Value Score: 1.0260922557590736e-12
+INFO - classes.py - 1607 - Feature Name: fastingbs | F-Statistic Score: 1.919483924507074 | P-Value Score: 0.16656651553738858
+INFO - classes.py - 1607 - Feature Name: maxhr | F-Statistic Score: 26.725676991264034 | P-Value Score: 3.4665840706972256e-07
+INFO - classes.py - 1607 - Feature Name: exerciseangina | F-Statistic Score: 39.22869634010129 | P-Value Score: 8.477237639504463e-10
+INFO - classes.py - 1607 - Feature Name: oldpeak | F-Statistic Score: 101.08473995930558 | P-Value Score: 1.1068330695116763e-21
+INFO - classes.py - 1607 - Feature Name: chestpaintype_ASY | F-Statistic Score: 194.80139764414736 | P-Value Score: 2.542042626313366e-37
+INFO - classes.py - 1607 - Feature Name: chestpaintype_ATA | F-Statistic Score: 79.00848344121226 | P-Value Score: 1.3049491052826005e-17
+INFO - classes.py - 1607 - Feature Name: st_slope_Flat | F-Statistic Score: 168.34742955726765 | P-Value Score: 3.795524034003576e-33
+INFO - classes.py - 1607 - Feature Name: st_slope_Up | F-Statistic Score: 76.69132863727081 | P-Value Score: 3.5730736723844143e-17
+INFO - classes.py - 1609 - Feature analysis successfully completed.
+INFO - classes.py - 1951 - Total model fits for RandomSearchCV: 11250
+INFO - classes.py - 1965 -    mean_fit_time  std_fit_time  mean_score_time  std_score_time  ... split14_test_score  mean_test_score  std_test_score  rank_test_score
+0       0.878692      0.021466         0.020942        0.004447  ...           0.548387         0.543212        0.012252              150
+1       0.644006      0.018168         0.016191        0.003545  ...           0.548387         0.543212        0.012252              150
+2       0.296043      0.011750         0.009661        0.003870  ...           0.548387         0.543212        0.012252              150
+3       0.842168      0.025369         0.019499        0.002416  ...           0.548387         0.543212        0.012252              150
+4       1.000895      0.035073         0.025411        0.006436  ...           0.548387         0.543212        0.012252              150
+5       0.200540      0.012201         0.005166        0.002266  ...           0.548387         0.543212        0.012252              150
+6       0.395057      0.019636         0.010140        0.003147  ...           0.548387         0.543212        0.012252              150
+7       0.314765      0.014935         0.008083        0.002389  ...           0.838710         0.816599        0.068007               89
+8       0.821249      0.039003         0.018338        0.003625  ...           0.838710         0.843952        0.059971               20
+9       0.882655      0.035467         0.024066        0.008547  ...           0.838710         0.816599        0.068007               89
+
+[10 rows x 29 columns]
+INFO - classes.py - 1967 - Best Parameters: {'criterion': 'entropy', 'max_depth': 30, 'min_impurity_decrease': np.float64(0.11073155663646482), 'min_samples_leaf': 37, 'min_samples_split': 53, 'n_estimators': 1369}
+INFO - classes.py - 1968 - Best Cross-Validation Score: 0.8481182795698924
+INFO - classes.py - 1978 - Accuracy score on validation set using the tuned model: 0.8216216216216217
+INFO - classes.py - 1986 - Tuned model score (0.8481182795698924) is higher than untuned model score (0).
+INFO - classes.py - 1990 - self.current_model has been updated with search.best_estimator_
+INFO - classes.py - 1992 - Model tuning successfully completed.
+ERROR - classes.py - 2017 - A set of parameters is None. Self.current_model = True | Self.best_params = True
+INFO - classes.py - 2023 - Params have been identified for final evaluation.
+INFO - classes.py - 2028 - X_train, X_test, y_train and y_test variables have been set for final evaluation. Full dataset is being used for evaluation.
+INFO - classes.py - 2032 - self.current_model has been cloned.
+INFO - classes.py - 2036 - Params have been set to cloned model.
+INFO - classes.py - 2040 - Model has been trained.
+INFO - classes.py - 2044 - Predictions have been made on X_test.
+INFO - classes.py - 2046 - Getting scores..
+INFO - classes.py - 2054 - Scores have been retrieved.
+INFO - classes.py - 2059 - roc_auc_score() has been added for this model.
+INFO - classes.py - 2071 - Results dictionary for the final evaluation has been created.
+INFO - classes.py - 2075 - Results DataFrame has been created:
+INFO - classes.py - 2076 - {'Model_Name': None, 'Model': RandomForestClassifier(criterion='entropy', max_depth=30,
+                       min_impurity_decrease=np.float64(0.11073155663646482),
+                       min_samples_leaf=37, min_samples_split=53,
+                       n_estimators=1369), 'Final_Accuracy_Score': 0.8178294573643411, 'Final_F1_Score': 0.8384879725085911, 'Final_Precision_Score': 0.8299319727891157, 'Final_Recall_Score': 0.8472222222222222}
+INFO - classes.py - 2081 - Final evaluation completed. If satisfied with performance, suggest saving model for future use.

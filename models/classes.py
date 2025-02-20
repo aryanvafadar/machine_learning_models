@@ -1397,6 +1397,17 @@ class ClfModelTester:
         self.best_params = None
         self.best_score = None
         self.search_results = None
+        
+        # final evaluation scores
+        self.final_f1 = None
+        self.final_accuracy = None
+        self.final_recall = None
+        self.final_precision = None
+        self.final_roc_auc = None
+        
+        # final evaluation frame
+        self.final_evaluation_frame = None
+        self.final_model_params = None
           
     def get_features_labels(self, model_test_size: float, label: str) -> np.array:
         """
@@ -1601,7 +1612,7 @@ class ClfModelTester:
         except Exception as e:
             logging.error(f"Unable to analyze features. Received error {e}")
     
-    def reduced_features(self, num_iterations: int = 2) -> bool:
+    def reduced_features(self) -> bool:
         """
         Reduce the features in our training and test data using the stored selected_features_mask.
         This function should only be used after features_analysis() has completed.
@@ -1776,8 +1787,6 @@ class ClfModelTester:
             
         """
         
-            # Check current model
-        
         # check self.current_model is RidgeClassifier
         if not isinstance(self.current_model, RidgeClassifier):
             logging.error("self.current_model is not RidgeClassifier. Optimization aborted.")
@@ -1873,23 +1882,30 @@ class ClfModelTester:
     def optimize_random_forest(self, optimize_method: str = 'random', num_iterations: int = 25, cv: int = 5, scoring: str = 'accuracy', refit: bool = True, n_jobs: int = -1):
         
         """
-        Optimizes a RandomForest() machine learning model using either GridSearchCV or RandomSearchCV.
+        Optimizes a RandomForestClassifier model using either GridSearchCV or RandomizedSearchCV.
         
         Args:
-            -
+            optimize_method (str): 'grid' or 'random'.
+            num_iterations (int): Number of iterations for RandomizedSearchCV (ignored for grid).
+            cv (int): Number of cross-validation folds.
+            scoring (str): Scoring metric.
+            refit (bool): Whether to refit the model on the best parameters.
+            n_jobs (int): Number of parallel jobs.
             
         Returns:
-            - 
+            True if optimization is successful; otherwise, None.
         """
         
         # check self.current_model = RandomForest
         if not isinstance(self.current_model, RandomForestClassifier):
             logging.error(f"Unable to perform optimization. self.current_model is not RandomForestClassifier. It is {self.current_model}.")
+            return None
             
         # check optimization method is valid
         optimize_method = optimize_method.lower()
         if optimize_method not in ['grid', 'random']:
             logging.error(f"Invalid optimization method. Expected 'grid' or 'random'. Received {optimize_method}. Please retry.")
+            return None
             
         # ignore num_iterations if optimize_method == 'grid'
         if optimize_method == 'grid' and num_iterations:
@@ -1943,16 +1959,131 @@ class ClfModelTester:
             search.fit(X=X_train, y=y_train) # train model
             
             # get best score, params and turn search results into a pandas dataframe
-            # self.best_score = search.best_score_
-            # self.best_params = search.best_params_            
+            self.best_score = search.best_score_
+            self.best_params = search.best_params_   
+            self.search_results = pd.DataFrame(data=search.cv_results_)     
+            logging.info(self.search_results.head(10))    
+            
+            logging.info(f"Best Parameters: {self.best_params}")
+            logging.info(f"Best Cross-Validation Score: {self.best_score}")
+            
+            # Test on our validation set if available
+            if hasattr(self, 'X_validator') and hasattr(self, 'y_validator'):
+                
+                X_validator = self.X_validator_reduced if self.use_reduced_features else self.X_validator
+                y_validator = self.y_validator
+                
+                validator_prediction = search.best_estimator_.predict(X_validator) # make predictions on our validation (testing) features
+                validator_score = accuracy_score(y_true=y_validator, y_pred=validator_prediction)
+                logging.info(f"Accuracy score on validation set using the tuned model: {validator_score}")
+                
+            # compare with previous model accuracy, and update self.current_model is tuned model score is better than original model
+            if self.best_score < self.accuracy:
+                logging.info(f"Tuned model accuracy score ({self.best_score}) is worse than untuned model score ({self.accuracy})")
+                logging.info("self.current_model has not been updated with tuned model.")
+                
+            else:
+                logging.info(f"Tuned model score ({self.best_score}) is higher than untuned model score ({self.accuracy}).")
+                if refit:
+                    self.current_model = search.best_estimator_
+                    self.best_params = search.best_params_
+                    logging.info("self.current_model has been updated with search.best_estimator_")
+                    
+            logging.info("Model tuning successfully completed.")
+            return True
         
         except Exception as e:
             logging.exception(f"Unable to optimize RandomForestClassifier(). Received error: {e}")
             return None
 
+    def final_evaluation(self, use_tuned_params: bool = True) -> pd.DataFrame:
+        """
+        Final evaluation of the model on the full test set.
+        
+        Args:
+            use_tuned_params (bool): If True, use the tuned parameters; otherwise, use the original parameters.
+            
+        Returns:
+            pd.DataFrame: A DataFrame containing the evaluation results.
+        """
+        
+        # check self.current_model is a valid sklearn model
+        if not hasattr(self.current_model, 'predict'):
+            logging.error("self.current_model is not a valid Scikit Learn model.")
+            return None
+        
+        # check self.current_model params & self.best_params exist
+        if not (self.current_model_params and self.best_params):
+            logging.error(f"A set of parameters is None. Self.current_model = {bool(self.current_model)} | Self.best_params = {bool(self.best_params)}")
+            # return None
 
+        try:
+            # decide which params to use
+            params = self.best_params if use_tuned_params else self.current_model_params
+            logging.info("Params have been identified for final evaluation.")
+            
+            # get feature set based on use_reduced_features
+            X_train, X_test = (self.X_train_full_reduced, self.X_test_reduced) if self.use_reduced_features else (self.X_train_full, self.X_test)
+            y_train, y_test = self.y_train_full, self.y_test
+            logging.info("X_train, X_test, y_train and y_test variables have been set for final evaluation. Full dataset is being used for evaluation.")
+            
+            # clone model
+            model = clone(self.current_model)
+            logging.info("self.current_model has been cloned.")
+            
+            # set params
+            model.set_params(**params)
+            logging.info("Params have been set to cloned model.")
+            
+            # train model using full training set
+            model.fit(X_train, y_train)
+            logging.info("Model has been trained.")
+            
+            # make prediction on test set
+            prediction = model.predict(X_test)
+            logging.info("Predictions have been made on X_test.")
+            
+            logging.info("Getting scores..")
+            
+            # get scores
+            self.final_accuracy = float(accuracy_score(y_true=y_test, y_pred=prediction))
+            self.final_f1 = float(f1_score(y_true=y_test, y_pred=prediction))
+            self.final_precision = float(precision_score(y_true=y_test, y_pred=prediction))
+            self.final_recall = float(recall_score(y_true=y_test, y_pred=prediction))
+            self.final_roc_auc = None
+            logging.info("Scores have been retrieved.")
+            
+            if hasattr(model, 'predict_proba'):
+                predic_proba = model.predict_proba(X_test)[:, 1]
+                self.final_roc_auc = float(roc_auc_score(y_true=y_test, y_score=predic_proba))
+                logging.info("roc_auc_score() has been added for this model.")
+                
+            # create results dict 
+            results_dict = {
+                'Model_Name': self.current_model_name,
+                'Model': model,
+                # 'Model_Params': model.get_params(),  # call the method to get parameters
+                'Final_Accuracy_Score': self.final_accuracy,
+                'Final_F1_Score': self.final_f1,
+                'Final_Precision_Score': self.final_precision,
+                'Final_Recall_Score': self.final_recall
+            }
+            logging.info("Results dictionary for the final evaluation has been created.")
 
-
+            # create results DataFrame and round float values
+            results_df = pd.DataFrame(data=[results_dict]).apply(lambda x: round(x, 3) if isinstance(x, float) else x)
+            logging.info("Results DataFrame has been created:")
+            logging.info(results_dict)
+            
+            # store and return results
+            self.final_evaluation_frame = results_df
+            self.final_model_params = model.get_params()
+            logging.info("Final evaluation completed. If satisfied with performance, suggest saving model for future use.")
+            return results_df
+                    
+        except Exception as e:
+            logging.exception(f"Unable to perform final evaluation. Received error: {e}")
+            return None
 
 
     
