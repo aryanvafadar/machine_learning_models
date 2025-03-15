@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import joblib
+import os
+import glob
 from pathlib import Path
 from config import output_files_folder, get_prediction_csv, get_ml_file
 
@@ -23,8 +25,6 @@ from sklearn.gaussian_process import GaussianProcessRegressor, GaussianProcessCl
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor, StackingRegressor, ExtraTreesRegressor, BaggingRegressor, AdaBoostRegressor, RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, HistGradientBoostingClassifier
 from sklearn.neural_network import MLPRegressor, MLPClassifier
-
-
 
 
 """ DataFrame Creator Class"""
@@ -1406,6 +1406,7 @@ class ClfModelTester:
         self.final_roc_auc = None
         
         # final evaluation frame
+        self.final_model = None
         self.final_evaluation_frame = None
         self.final_model_params = None
           
@@ -2078,6 +2079,7 @@ class ClfModelTester:
             # store and return results
             self.final_evaluation_frame = results_df
             self.final_model_params = model.get_params()
+            self.final_model = model
             logging.info("Final evaluation completed. If satisfied with performance, suggest saving model for future use.")
             return results_df
                     
@@ -2085,11 +2087,174 @@ class ClfModelTester:
             logging.exception(f"Unable to perform final evaluation. Received error: {e}")
             return None
 
+    def save_model(self, file_name: str, output_files_folder: str) -> str:
+        """
+        Saves self.final_model as a pickle (.pkl) file for reuse later.
 
-    
+        Args:
+            file_name (str): The base name of the file to save the model.
+            output_files_folder (str): The folder where the model file should be saved.
+
+        Returns:
+            str: The full file path if saving is successful; otherwise, returns None.
+        """
+        # Check that self.final_model exists
+        if not self.final_model:
+            logging.error("self.final_model does not exist. Make sure to perform final_evaluation() before calling this function.")
+            return None
+
+        # Check that self.final_model is a valid scikit-learn model
+        if not hasattr(self.final_model, 'predict'):
+            logging.error("self.final_model is not a valid scikit-learn machine learning model.")
+            return None
+
+        try:
+            # Ensure the output folder exists
+            if not os.path.exists(output_files_folder):
+                os.makedirs(output_files_folder)
+                logging.info(f"Created output folder: {output_files_folder}")
+
+            # Set the file path
+            filepath = f"{output_files_folder}/{file_name}.pkl"
+
+            # Save the model using joblib
+            joblib.dump(value=self.final_model, filename=filepath)
+            logging.info(f"self.final_model has been successfully exported and saved. Filename: {filepath}")
+
+            return filepath
+
+        except Exception as e:
+            logging.exception(f"Unable to save the final model. Received error: {e}")
+            return None
+        
 """Classification Label/Target Predictor Class"""
 class ClfLabelPredictor:
-    pass
+    
+    def __init__(self, file_to_predict: str):
+        
+        # the CSV file we will be turning into a DataFrame to make predictions on
+        self.file_to_predict = file_to_predict
+        
+        # Use composition to pull functions from DatasetCreator & ClfModelTester
+        self.datasetcreator = DatasetCreator(csv_file=self.file_to_predict)
+        
+        # attributes returned from load_model
+        self.model_file = None # the filepath for the tuned machine learning model
+        self.loaded_model = None # replaced once the model_file is loaded
+        self.loaded_params = None # the parameters on our loaded model
+        self.trained_features = None # the number of features used to train the loaded model
+        
+        # attribute from prepare_prediction_frame()
+        self.initial_frame = None
+        self.cleaned_frame = None
+        self.encoded_frame = None
+        self.label = None
+        
+    
+    def load_model(self, output_folder: str):
+        """
+        Iterated through the output_files folder and allows the user to select a tuned model file. The selected file is set to self.model_file.
+        
+        Then, it loads the file using joblib and sets it to self.loaded_model.
+        """
+        
+        # check output_files_folder exists
+        if not os.path.exists(output_folder):
+            logging.error(f"File path {output_folder} does not exist. Please check filepath.")
+            return None
+        logging.info(f"Output folder exists: {output_folder}")
+        
+        # check at least 1 pkl file exists in the directory
+        model_files = glob.glob(f"{output_folder}/*.pkl")
+        if len(model_files) == 0:
+            logging.error(f"No 'pkl' files found in the {output_folder} folder.")   
+            return None
+        logging.info(f"Number of model files found in output folder: {model_files}")
+        
+        try:
+            logging.info("Iterating through the list of models found in the output folder.")
+            
+            # iterate through the list of pkl model files and allow the user to select the file they want to use
+            for idx, model in enumerate(model_files, start=1):
+                print(f"Model {idx}: {model}")
+                logging.info(f"Model {idx}: {model}")
+                
+            selection = model_files[int(input("Select a Model: ")) - 1] 
+            logging.info(f"User selected model file: {selection}")
+            
+            self.model_file = selection # set the file selection to self.model_file
+            logging.info("Model file set to self.model_file")
+            
+            # load the model file
+            loaded_model = joblib.load(filename=self.model_file)
+            logging.info("Model successfully loaded from passed file.")
+            
+            self.loaded_model = loaded_model
+            logging.info("Loaded model has been set to self.loaded_model.")
+            
+            self.loaded_params = loaded_model.get_params()
+            logging.info("Loaded model parameters has been set to self.loaded_params.")
+            
+            # log additional information about the model
+            logging.info(f"Model Type: {type(self.loaded_model)}")
+            logging.info(f"Model Params: {self.loaded_params}")
+            
+            # Log feature-related attributes if available.
+            if hasattr(loaded_model, 'n_features_in_'):
+                self.trained_features = loaded_model.n_features_in_
+                logging.info(f"Model was trained with {loaded_model.n_features_in_} features.")
+            if hasattr(loaded_model, 'feature_names_in_'):
+                logging.info(f"Feature names: {loaded_model.feature_names_in_}")
+            if hasattr(loaded_model, 'classes_'):
+                logging.info(f"Model classes: {loaded_model.classes_}")
+                
+            
+            return self.loaded_model
+        
+        except Exception as e:
+            logging.exception(f"Unable to load the model. Received error: {e}")
+            return None
+        
+    def prepare_prediction_frame(self, label: str, create_frame: bool=True, clean_frame: bool=True, encode_frame: bool=True) -> pd.DataFrame:
+        
+        """
+        Takes the csv_file we want to make a prediction on and creates the DataFrame, cleans it and encodes it. 
+        """
+        
+        # check self.file_to_predict is valid
+        if not os.path.exists(path=self.file_to_predict):
+           logging.error(f"CSV Filepath does not exist: {self.file_to_predict}")
+           
+        # create the dataframe
+        if not create_frame:
+            logging.error(f"create_frame parameter set to {create_frame}. Unable to create frame and perform rest of the function. Exiting.")
+            return None
+        
+        try:
+            
+            # create the frame. sets frame to self_initial_frame
+            frame = self.datasetcreator.create_frame()
+            
+            # clean the frame. sets cleaned_frame to self.cleaned_frame
+            cleaned_frame = self.datasetcreator.clean_frame()
+            
+            # encode the frame. sets encoded_frame to self.encoded_frame
+            self.label = label
+            encoded_frame = self.datasetcreator.encode_frame(label=self.label)
+            self.encoded_frame = encoded_frame
+        
+        except Exception as e:
+            logging.exception(f"Unable to prepare the prediction DataFrame. Received error {e}")
+        
+        
+           
+
+
+
+
+
+
+
 
 
 """Class to Make Visualizations, Plots, Graphs and Charts on the Model Results"""
